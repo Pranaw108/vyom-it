@@ -1,0 +1,95 @@
+---
+import Logo from './Logo.astro';
+import Icon from '../ui/Icon.astro';
+import { getServices, getSettings, hasInsights } from '../../lib/content';
+
+const settings = getSettings();
+const services = getServices();
+const year = new Date().getFullYear();
+
+const company = [
+  { label: 'Our work', href: '/work' },
+  { label: 'About us', href: '/about' },
+  { label: 'How we work', href: '/#process' },
+  ...(hasInsights() ? [{ label: 'Insights', href: '/insights' }] : []),
+  { label: 'Contact', href: '/contact' },
+  { label: 'Request a quote', href: '/quote' },
+];
+const legal = [
+  { label: 'Privacy policy', href: '/privacy' },
+  { label: 'Terms of use', href: '/terms' },
+  { label: 'Cookie notice', href: '/cookies' },
+];
+---
+
+<footer class="bg-night text-on-night" aria-labelledby="footer-heading">
+  <h2 id="footer-heading" class="sr-only">Site footer</h2>
+  <div class="container-site grid gap-12 py-16 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.1fr]" id="footer-nav">
+    <div class="flex max-w-sm flex-col gap-5">
+      <Logo class="text-on-night" />
+      <p class="text-on-night-muted">{settings.description}</p>
+      <p class="text-sm text-on-night-muted">We reply to every enquiry {settings.replyTime}.</p>
+    </div>
+
+    <nav aria-label="Services">
+      <p class="eyebrow mb-4 text-highlight">Services</p>
+      <ul class="grid gap-2.5">
+        {services.map((s) => (
+          <li><a href={`/services/${s.slug}`} class="footer-link">{s.name}</a></li>
+        ))}
+      </ul>
+    </nav>
+
+    <nav aria-label="Company">
+      <p class="eyebrow mb-4 text-highlight">Company</p>
+      <ul class="grid gap-2.5">
+        {company.map((l) => <li><a href={l.href} class="footer-link">{l.label}</a></li>)}
+      </ul>
+    </nav>
+
+    <div>
+      <p class="eyebrow mb-4 text-highlight">Get in touch</p>
+      <ul class="grid gap-3 text-on-night-muted">
+        {settings.email && (
+          <li class="flex items-center gap-2.5"><Icon name="mail" size={18} /><a href={`mailto:${settings.email}`} class="footer-link">{settings.email}</a></li>
+        )}
+        {settings.phone && (
+          <li class="flex items-center gap-2.5"><Icon name="phone" size={18} /><a href={`tel:${settings.phone.replace(/\s/g, '')}`} class="footer-link">{settings.phone}</a></li>
+        )}
+        {settings.address && (
+          <li class="flex items-start gap-2.5">
+            <Icon name="map-pin" size={18} class="mt-1" />
+            <span>{settings.address.line}<br /><a href={settings.address.mapUrl} class="footer-link text-sm" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></span>
+          </li>
+        )}
+        <li class="flex items-start gap-2.5"><Icon name="clock" size={18} class="mt-1" /><span>{settings.businessHours}</span></li>
+        <li><a href="/contact" class="footer-link inline-flex items-center gap-1.5 font-medium text-on-night">Send us a message <Icon name="arrow-right" size={16} /></a></li>
+      </ul>
+      {settings.social.length > 0 && (
+        <ul class="mt-6 flex flex-wrap gap-4">
+          {settings.social.map((s) => (
+            <li><a href={s.url} class="footer-link text-sm" target="_blank" rel="noopener noreferrer">{s.label}</a></li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+
+  <div class="border-t border-white/10">
+    <div class="container-site flex flex-col gap-4 py-6 text-sm text-on-night-muted sm:flex-row sm:items-center sm:justify-between">
+      <p>© {year} {settings.companyName}. All rights reserved.</p>
+      <ul class="flex flex-wrap gap-x-6 gap-y-2">
+        {legal.map((l) => <li><a href={l.href} class="footer-link">{l.label}</a></li>)}
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer-link {
+    color: var(--on-night-muted);
+    transition: color 150ms;
+    text-underline-offset: 4px;
+  }
+  .footer-link:hover { color: var(--on-night); text-decoration: underline; }
+</style>

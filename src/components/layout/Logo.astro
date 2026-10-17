@@ -1,0 +1,19 @@
+---
+import { getSettings } from '../../lib/content';
+
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+const { companyName } = getSettings();
+---
+
+<a href="/" class:list={['inline-flex items-center gap-2.5 rounded-md', className]} aria-label={`${companyName} home`}>
+  <!-- Mark: a "V" opening to the sky, with one point of light above the horizon line. -->
+  <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true" class="shrink-0">
+    <rect width="32" height="32" rx="9" fill="#2e5bff" />
+    <path d="M9 10.5 16 23l7-12.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="16" cy="9" r="2.4" fill="#ffb547" />
+  </svg>
+  <span class="font-display text-[1.15rem] font-semibold tracking-tight">{companyName}</span>
+</a>

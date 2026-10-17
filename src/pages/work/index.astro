@@ -1,0 +1,122 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/sections/PageHero.astro';
+import ProjectCard from '../../components/work/ProjectCard.astro';
+import CtaBand from '../../components/sections/CtaBand.astro';
+import { getCaseStudies, getServices } from '../../lib/content';
+import { breadcrumbJsonLd } from '../../lib/seo';
+
+const projects = getCaseStudies();
+const services = getServices().filter((s) => projects.some((p) => p.services.includes(s.slug)));
+const crumbs = [
+  { name: 'Home', path: '/' },
+  { name: 'Work', path: '/work' },
+];
+const allConcept = projects.every((p) => p.type === 'concept');
+---
+
+<BaseLayout
+  title="Our work: projects and case studies"
+  description="Projects that show how Vyom IT plans, designs and builds websites, mobile apps and digital products, each clearly labelled as client or concept work."
+  headerTone="night"
+  jsonLd={[breadcrumbJsonLd(crumbs, Astro.site)]}
+>
+  <PageHero
+    breadcrumbs={crumbs}
+    eyebrow="Our work"
+    title="How we think, design and build"
+    intro={allConcept
+      ? 'Every project here is a self-initiated concept, clearly labelled, showing our approach. Client case studies will be added with their permission as projects launch.'
+      : 'Client projects and self-initiated concepts, each clearly labelled, with the problem, the approach and what changed.'}
+  />
+
+  <section class="py-20" aria-labelledby="projects-title">
+    <div class="container-site flex flex-col gap-10">
+      <h2 id="projects-title" class="sr-only">Projects</h2>
+
+      {projects.length === 0 ? (
+        <div class="flex flex-col items-start gap-4 rounded-2xl border border-line bg-surface p-10">
+          <h3 class="text-2xl font-semibold">Case studies are on the way</h3>
+          <p class="max-w-xl text-muted">We are writing up our first projects. In the meantime, see what each service includes or tell us about yours.</p>
+        </div>
+      ) : (
+        <>
+          <div class="flex flex-wrap gap-2" role="group" aria-label="Filter projects by service" data-work-filter hidden>
+            <button type="button" class="filter-chip" aria-pressed="true" data-filter="all">All projects</button>
+            {services.map((s) => (
+              <button type="button" class="filter-chip" aria-pressed="false" data-filter={s.slug}>{s.navLabel}</button>
+            ))}
+          </div>
+          <p class="sr-only" aria-live="polite" data-work-status></p>
+          <ul class="grid gap-6 md:grid-cols-2 lg:grid-cols-3" data-work-list>
+            {projects.map((p, i) => (
+              <li data-services={p.services.join(' ')} class="work-item" data-reveal style={`--reveal-index:${i % 3}`}>
+                <ProjectCard project={p} headingLevel="h3" />
+              </li>
+            ))}
+          </ul>
+          <div class="hidden flex-col items-start gap-3 rounded-2xl border border-line bg-surface p-8" data-work-empty>
+            <p class="font-medium">No projects in this category yet.</p>
+            <button type="button" class="font-medium text-accent underline underline-offset-4" data-filter="all">Show all projects</button>
+          </div>
+        </>
+      )}
+    </div>
+  </section>
+
+  <CtaBand title="Want a project like these?" body="Tell us about your idea. We reply within one working day with questions and next steps." />
+</BaseLayout>
+
+<style>
+  .filter-chip {
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    min-height: 40px;
+    transition: background-color 150ms, color 150ms, border-color 150ms;
+  }
+  .filter-chip:hover { background: var(--mist); }
+  .filter-chip[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: var(--canvas); }
+  .work-item { transition: opacity 250ms var(--ease-out-soft), transform 250ms var(--ease-out-soft); }
+  .work-item.is-filtered { display: none; }
+</style>
+
+<script>
+  // Filter by service without reloading. Without JS every project shows (FR-035).
+  const filterBar = document.querySelector<HTMLElement>('[data-work-filter]');
+  const items = [...document.querySelectorAll<HTMLElement>('[data-services]')];
+  const empty = document.querySelector<HTMLElement>('[data-work-empty]');
+  const status = document.querySelector<HTMLElement>('[data-work-status]');
+
+  function apply(filter: string, updateUrl = true) {
+    let shown = 0;
+    items.forEach((item) => {
+      const match = filter === 'all' || item.dataset.services?.split(' ').includes(filter);
+      item.classList.toggle('is-filtered', !match);
+      if (match) shown++;
+    });
+    filterBar?.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.filter === filter));
+    });
+    empty?.classList.toggle('hidden', shown > 0);
+    empty?.classList.toggle('flex', shown === 0);
+    if (status) status.textContent = `${shown} project${shown === 1 ? '' : 's'} shown`;
+    if (updateUrl) {
+      const url = new URL(location.href);
+      if (filter === 'all') url.searchParams.delete('service');
+      else url.searchParams.set('service', filter);
+      history.replaceState(null, '', url);
+    }
+  }
+
+  if (filterBar) {
+    filterBar.hidden = false;
+    document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) =>
+      b.addEventListener('click', () => apply(b.dataset.filter ?? 'all')),
+    );
+    const initial = new URL(location.href).searchParams.get('service');
+    if (initial) apply(initial, false);
+  }
+</script>

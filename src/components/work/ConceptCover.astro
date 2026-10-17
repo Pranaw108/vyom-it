@@ -1,0 +1,87 @@
+---
+// Illustrated covers for concept projects. Self-contained artwork with its own background,
+// so it reads the same in light and dark themes.
+interface Props {
+  variant: 'clinic' | 'saas' | 'storefront';
+  class?: string;
+}
+const { variant, class: className } = Astro.props;
+---
+
+<div class:list={['cover relative aspect-[16/10] w-full overflow-hidden', `cover--${variant}`, className]} aria-hidden="true">
+  {variant === 'clinic' && (
+    <svg viewBox="0 0 480 300" class="absolute inset-0 h-full w-full">
+      <circle cx="400" cy="40" r="120" fill="#8b6cff" opacity="0.25" />
+      <rect x="175" y="34" width="130" height="250" rx="22" fill="#170f33" />
+      <rect x="183" y="44" width="114" height="232" rx="16" fill="#ffffff" />
+      <rect x="195" y="60" width="60" height="8" rx="4" fill="#170f33" />
+      <rect x="195" y="74" width="80" height="6" rx="3" fill="#c9bff5" />
+      {[0, 1, 2].map((r) => [0, 1, 2].map((c) => (
+        <rect x={195 + c * 32} y={94 + r * 30} width="26" height="22" rx="6" fill={r === 1 && c === 1 ? '#6d3fe0' : '#efe9ff'} />
+      )))}
+      <rect x="195" y="190" width="90" height="34" rx="10" fill="#f6f3ff" />
+      <circle cx="210" cy="207" r="8" fill="#ffb547" />
+      <rect x="224" y="200" width="50" height="6" rx="3" fill="#170f33" />
+      <rect x="224" y="210" width="34" height="5" rx="2.5" fill="#c9bff5" />
+      <rect x="195" y="236" width="90" height="26" rx="13" fill="#6d3fe0" />
+      <rect x="60" y="96" width="96" height="40" rx="12" fill="#ffffff" opacity="0.95" />
+      <circle cx="78" cy="116" r="8" fill="#12805c" />
+      <rect x="92" y="109" width="50" height="6" rx="3" fill="#170f33" />
+      <rect x="92" y="119" width="36" height="5" rx="2.5" fill="#9ca3af" />
+      <rect x="326" y="170" width="100" height="40" rx="12" fill="#ffffff" opacity="0.95" />
+      <rect x="340" y="182" width="58" height="6" rx="3" fill="#170f33" />
+      <rect x="340" y="193" width="40" height="5" rx="2.5" fill="#9ca3af" />
+    </svg>
+  )}
+  {variant === 'saas' && (
+    <svg viewBox="0 0 480 300" class="absolute inset-0 h-full w-full">
+      <circle cx="60" cy="280" r="140" fill="#7c9bff" opacity="0.25" />
+      <rect x="40" y="36" width="400" height="240" rx="16" fill="#0b1324" />
+      <rect x="40" y="36" width="88" height="240" rx="16" fill="#131d36" />
+      {[0, 1, 2, 3, 4].map((i) => (
+        <rect x="56" y={64 + i * 24} width={i === 1 ? 56 : 46} height="8" rx="4" fill={i === 1 ? '#7c9bff' : '#2a3757'} />
+      ))}
+      <rect x="146" y="56" width="120" height="10" rx="5" fill="#eef1f7" />
+      <rect x="146" y="80" width="86" height="54" rx="10" fill="#131d36" />
+      <rect x="240" y="80" width="86" height="54" rx="10" fill="#131d36" />
+      <rect x="334" y="80" width="86" height="54" rx="10" fill="#131d36" />
+      <rect x="156" y="92" width="40" height="6" rx="3" fill="#2a3757" />
+      <rect x="156" y="106" width="56" height="12" rx="4" fill="#7c9bff" />
+      <rect x="250" y="92" width="40" height="6" rx="3" fill="#2a3757" />
+      <rect x="250" y="106" width="48" height="12" rx="4" fill="#3fbf8f" />
+      <rect x="344" y="92" width="40" height="6" rx="3" fill="#2a3757" />
+      <rect x="344" y="106" width="52" height="12" rx="4" fill="#ffb547" />
+      <rect x="146" y="146" width="274" height="112" rx="10" fill="#131d36" />
+      <path d="M160 238 C 190 226 210 200 240 206 S 290 172 320 180 S 380 150 406 160" fill="none" stroke="#7c9bff" stroke-width="3" />
+      <path d="M160 238 C 190 226 210 200 240 206 S 290 172 320 180 S 380 150 406 160 V250 H160Z" fill="#7c9bff" opacity="0.15" />
+      <circle cx="406" cy="160" r="5" fill="#ffb547" />
+    </svg>
+  )}
+  {variant === 'storefront' && (
+    <svg viewBox="0 0 480 300" class="absolute inset-0 h-full w-full">
+      <circle cx="420" cy="260" r="150" fill="#ffb547" opacity="0.25" />
+      <rect x="44" y="30" width="392" height="250" rx="14" fill="#fffaf2" />
+      <rect x="44" y="30" width="392" height="28" rx="14" fill="#f1e4cf" />
+      <circle cx="62" cy="44" r="4" fill="#d9c3a0" /><circle cx="76" cy="44" r="4" fill="#d9c3a0" /><circle cx="90" cy="44" r="4" fill="#d9c3a0" />
+      <rect x="62" y="72" width="200" height="104" rx="12" fill="#3b2314" />
+      <rect x="78" y="92" width="110" height="10" rx="5" fill="#fffaf2" />
+      <rect x="78" y="110" width="140" height="7" rx="3.5" fill="#c79a6b" />
+      <rect x="78" y="140" width="76" height="22" rx="11" fill="#ffb547" />
+      <circle cx="350" cy="124" r="52" fill="#c4743a" />
+      <circle cx="350" cy="124" r="36" fill="#3b2314" />
+      <path d="M338 106 C 360 116 340 134 362 144" fill="none" stroke="#c4743a" stroke-width="4" stroke-linecap="round" />
+      {[0, 1, 2, 3].map((i) => (
+        <g>
+          <rect x={62 + i * 94} y="194" width="80" height="70" rx="10" fill="#f1e4cf" />
+          <rect x={72 + i * 94} y="244" width="40" height="6" rx="3" fill="#3b2314" />
+        </g>
+      ))}
+    </svg>
+  )}
+</div>
+
+<style>
+  .cover--clinic { background: linear-gradient(135deg, #2a1a5e, #6d3fe0); }
+  .cover--saas { background: linear-gradient(135deg, #0f2a7a, #2e5bff); }
+  .cover--storefront { background: linear-gradient(135deg, #8a4b1c, #e0913f); }
+</style>

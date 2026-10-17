@@ -1,0 +1,34 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import Icon from './Icon.astro';
+
+type Variant = 'primary' | 'secondary' | 'ghost' | 'on-night';
+type Size = 'md' | 'lg';
+
+type Props = HTMLAttributes<'a'> & {
+  href: string;
+  variant?: Variant;
+  size?: Size;
+  arrow?: boolean;
+};
+
+const { href, variant = 'primary', size = 'md', arrow = false, class: className, ...rest } = Astro.props;
+
+const base =
+  'group inline-flex items-center justify-center gap-2 rounded-full font-medium transition-[background-color,color,box-shadow,transform] duration-200 ease-out-soft active:scale-[0.98] focus-visible:outline-offset-4';
+const sizes: Record<Size, string> = {
+  md: 'h-11 px-5 text-[0.95rem]',
+  lg: 'h-13 px-7 text-base',
+};
+const variants: Record<Variant, string> = {
+  primary: 'bg-accent text-on-accent shadow-[0_8px_24px_-10px_var(--accent)] hover:bg-accent-strong hover:-translate-y-px',
+  secondary: 'border border-line-strong bg-canvas text-ink hover:bg-mist',
+  ghost: 'text-ink hover:bg-mist',
+  'on-night': 'border border-white/20 bg-white/5 text-on-night backdrop-blur hover:bg-white/12',
+};
+---
+
+<a href={href} class:list={[base, sizes[size], variants[variant], className]} {...rest}>
+  <slot />
+  {arrow && <Icon name="arrow-right" size={18} class="transition-transform duration-200 group-hover:translate-x-1" />}
+</a>

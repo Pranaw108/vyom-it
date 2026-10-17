@@ -1,0 +1,47 @@
+---
+import SectionHeading from '../ui/SectionHeading.astro';
+import Icon from '../ui/Icon.astro';
+import type { TeamMember } from '../../lib/schemas/content';
+
+interface Props {
+  members: TeamMember[];
+}
+const { members } = Astro.props;
+const initials = (name: string) => name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+const title = members.length <= 3 ? 'Meet the founders' : 'Meet the team';
+---
+
+{/* Shows only published, consented profiles; nothing renders until there is at least one. */}
+{members.length > 0 && (
+  <section class="py-24" aria-labelledby="team-title">
+    <div class="container-site flex flex-col gap-12">
+      <SectionHeading id="team-title" eyebrow="People" title={title} />
+      <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {members.map((m, i) => (
+          <li class="flex flex-col gap-4 rounded-2xl border border-line bg-canvas p-6" data-reveal style={`--reveal-index:${i % 3}`}>
+            {m.photo ? (
+              <img src={m.photo} alt={m.photoAlt ?? `Photo of ${m.name}`} width="480" height="480" loading="lazy" class="aspect-square w-full rounded-xl object-cover" />
+            ) : (
+              <div class="grid aspect-square w-full place-items-center rounded-xl bg-accent-soft font-display text-5xl font-bold text-accent" aria-hidden="true">{initials(m.name)}</div>
+            )}
+            <div>
+              <h3 class="text-xl font-semibold">{m.name}</h3>
+              <p class="text-muted">{m.designation}</p>
+            </div>
+            <p>{m.bio}</p>
+            {m.skills.length > 0 && (
+              <ul class="flex flex-wrap gap-1.5">{m.skills.map((s) => <li class="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted">{s}</li>)}</ul>
+            )}
+            {m.links.length > 0 && (
+              <ul class="mt-auto flex gap-4 pt-2">
+                {m.links.map((l) => (
+                  <li><a href={l.url} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-sm font-medium text-accent">{l.label}<Icon name="external" size={14} /></a></li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

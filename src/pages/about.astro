@@ -1,0 +1,64 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/sections/PageHero.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import Icon from '../components/ui/Icon.astro';
+import Process from '../components/sections/Process.astro';
+import CtaBand from '../components/sections/CtaBand.astro';
+import TeamGrid from '../components/sections/TeamGrid.astro';
+import { getAbout, getHome, getTeam } from '../lib/content';
+import { breadcrumbJsonLd } from '../lib/seo';
+
+const about = getAbout();
+const team = getTeam();
+const crumbs = [
+  { name: 'Home', path: '/' },
+  { name: 'About', path: '/about' },
+];
+---
+
+<BaseLayout
+  title="About us"
+  description="Who we are, what we believe and how we work: a design and engineering team building websites, apps and digital products for growing businesses."
+  headerTone="night"
+  jsonLd={[breadcrumbJsonLd(crumbs, Astro.site)]}
+>
+  <PageHero breadcrumbs={crumbs} eyebrow="About us" title={about.intro.headline} intro={about.intro.body} />
+
+  <section class="container-site grid gap-10 py-24 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16" aria-labelledby="story-title">
+    <SectionHeading id="story-title" eyebrow="Our story" title="Why we started" />
+    <div class="flex flex-col gap-5 text-lg leading-relaxed" data-reveal>
+      {about.story.map((p) => <p>{p}</p>)}
+    </div>
+  </section>
+
+  <section class="bg-surface py-20" aria-label="Mission and vision">
+    <div class="container-site grid gap-6 md:grid-cols-2">
+      <div class="flex flex-col gap-4 rounded-3xl bg-night p-8 text-on-night sm:p-10" data-reveal>
+        <p class="eyebrow text-highlight">Mission</p>
+        <p class="font-display text-2xl font-semibold leading-snug sm:text-3xl">{about.mission}</p>
+      </div>
+      <div class="flex flex-col gap-4 rounded-3xl border border-line bg-canvas p-8 sm:p-10" data-reveal style="--reveal-index:1">
+        <p class="eyebrow text-accent">Vision</p>
+        <p class="font-display text-2xl font-semibold leading-snug sm:text-3xl">{about.vision}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="container-site flex flex-col gap-12 py-24" aria-labelledby="values-title">
+    <SectionHeading id="values-title" eyebrow="What we value" title="The commitments behind every project" />
+    <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {about.values.map((v, i) => (
+        <li class="flex flex-col gap-3" data-reveal style={`--reveal-index:${i}`}>
+          <span class="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><Icon name={v.icon} size={22} /></span>
+          <h3 class="text-xl font-semibold">{v.title}</h3>
+          <p class="text-muted">{v.body}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <TeamGrid members={team} />
+  <Process steps={getHome().process} />
+  <CtaBand title="Let's talk about what you're building" ctaLabel="Talk to us" ctaHref="/contact" />
+</BaseLayout>

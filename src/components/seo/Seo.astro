@@ -1,0 +1,51 @@
+---
+import { getSettings } from '../../lib/content';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  type?: 'website' | 'article';
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown>[];
+}
+
+const { title, description, image = '/og-default.png', type = 'website', noindex = false, jsonLd = [] } = Astro.props;
+const settings = getSettings();
+
+const fullTitle = title.includes(settings.companyName) ? title : `${title} | ${settings.companyName}`;
+const canonical = new URL(Astro.url.pathname.replace(/\/$/, '') || '/', Astro.site);
+const imageUrl = new URL(image, Astro.site);
+// Preview and temporary deployments set PUBLIC_INDEXING=false so they never appear in search.
+const blockIndexing = noindex || import.meta.env.PUBLIC_INDEXING === 'false';
+
+const organisation = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: settings.companyName,
+  url: Astro.site?.toString(),
+  logo: new URL('/favicon.svg', Astro.site).toString(),
+  description: settings.description,
+  ...(settings.email ? { email: settings.email } : {}),
+  ...(settings.social.length ? { sameAs: settings.social.map((s) => s.url) } : {}),
+};
+const structuredData = [organisation, ...jsonLd];
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+{blockIndexing && <meta name="robots" content="noindex, nofollow" />}
+
+<meta property="og:type" content={type} />
+<meta property="og:site_name" content={settings.companyName} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={imageUrl} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageUrl} />
+
+{structuredData.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />)}

@@ -1,0 +1,48 @@
+---
+import ConceptCover from './ConceptCover.astro';
+import Icon from '../ui/Icon.astro';
+import TypeBadge from './TypeBadge.astro';
+import type { CaseStudy } from '../../lib/schemas/content';
+import { serviceName } from '../../lib/content';
+
+interface Props {
+  project: CaseStudy;
+  headingLevel?: 'h3' | 'h2';
+}
+const { project, headingLevel: Heading = 'h3' } = Astro.props;
+---
+
+<article class="project-card group relative flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-canvas">
+  <div class="overflow-hidden">
+    <ConceptCover variant={project.cover} class="transition-transform duration-500 ease-out-soft group-hover:scale-[1.03]" />
+  </div>
+  <div class="flex flex-1 flex-col gap-3 p-6">
+    <div class="flex flex-wrap items-center gap-2">
+      <TypeBadge type={project.type} />
+      <span class="text-sm text-muted">{project.industry}</span>
+    </div>
+    <Heading class="text-xl font-semibold">
+      <a href={`/work/${project.slug}`} class="after:absolute after:inset-0 after:content-['']">{project.title}</a>
+    </Heading>
+    <p class="text-muted">{project.summary}</p>
+    <div class="mt-auto flex items-center justify-between gap-3 pt-2">
+      <ul class="flex flex-wrap gap-1.5">
+        {project.services.map((s) => <li class="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted">{serviceName(s)}</li>)}
+      </ul>
+      <Icon name="arrow-right" size={18} class="shrink-0 text-accent transition-transform duration-200 group-hover:translate-x-1" />
+    </div>
+  </div>
+</article>
+
+<style>
+  .project-card {
+    transition: border-color 200ms, box-shadow 200ms, transform 200ms var(--ease-out-soft);
+  }
+  .project-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+    box-shadow: var(--shadow-card);
+    transform: translateY(-2px);
+  }
+  .project-card:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .project-card :global(a:focus-visible) { outline: none; }
+</style>

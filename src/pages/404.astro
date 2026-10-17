@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Button from '../components/ui/Button.astro';
+
+const links = [
+  { label: 'Services', href: '/services', body: 'Web, mobile, design and growth' },
+  { label: 'Our work', href: '/work', body: 'Projects and how we approached them' },
+  { label: 'Contact', href: '/contact', body: 'Ask us anything' },
+];
+---
+
+<BaseLayout title="Page not found" description="The page you were looking for does not exist." noindex>
+  <section class="container-site flex flex-col items-start gap-8 py-24 lg:py-32">
+    <p class="eyebrow text-accent">Error 404</p>
+    <h1 class="max-w-2xl text-4xl font-bold sm:text-5xl">This page drifted out of orbit.</h1>
+    <p class="max-w-xl text-lg text-muted">The link may be old or mistyped. Here are some good places to continue.</p>
+    <Button href="/" arrow>Go to the homepage</Button>
+    <ul class="grid w-full gap-4 pt-6 sm:grid-cols-3">
+      {links.map((l) => (
+        <li>
+          <a href={l.href} class="flex flex-col gap-1 rounded-2xl border border-line p-5 transition-colors hover:border-accent">
+            <span class="font-semibold">{l.label}</span>
+            <span class="text-sm text-muted">{l.body}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</BaseLayout>

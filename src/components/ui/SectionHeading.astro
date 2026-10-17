@@ -1,0 +1,24 @@
+---
+interface Props {
+  eyebrow?: string;
+  title: string;
+  intro?: string;
+  align?: 'left' | 'center';
+  id?: string;
+  tone?: 'default' | 'night';
+}
+
+const { eyebrow, title, intro, align = 'left', id, tone = 'default' } = Astro.props;
+const night = tone === 'night';
+---
+
+<header
+  class:list={['flex max-w-2xl flex-col gap-4', align === 'center' && 'mx-auto items-center text-center']}
+  data-reveal
+>
+  {eyebrow && <p class:list={['eyebrow', night ? 'text-highlight' : 'text-accent']}>{eyebrow}</p>}
+  <h2 id={id} class:list={['text-3xl font-semibold leading-tight sm:text-4xl', night ? 'text-on-night' : 'text-ink']}>
+    {title}
+  </h2>
+  {intro && <p class:list={['text-lg', night ? 'text-on-night-muted' : 'text-muted']}>{intro}</p>}
+</header>

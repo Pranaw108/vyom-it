@@ -1,0 +1,34 @@
+---
+import SectionHeading from '../ui/SectionHeading.astro';
+import Icon from '../ui/Icon.astro';
+import type { Testimonial } from '../../lib/schemas/content';
+
+interface Props {
+  items: Testimonial[];
+}
+const { items } = Astro.props;
+---
+
+{/* Renders nothing at all until genuine testimonials exist (FR-019). */}
+{items.length > 0 && (
+  <section class="py-24" aria-labelledby="testimonials-title">
+    <div class="container-site flex flex-col gap-12">
+      <SectionHeading id="testimonials-title" eyebrow="Client words" title="What clients say" />
+      <ul class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {items.map((t) => (
+          <li class="flex flex-col gap-5 rounded-2xl border border-line bg-canvas p-7" data-reveal>
+            <blockquote class="text-lg">“{t.quote}”</blockquote>
+            <div class="mt-auto flex items-end justify-between gap-4">
+              <p class="text-sm"><span class="font-semibold">{t.name}</span><br /><span class="text-muted">{t.role}, {t.company}</span></p>
+              {t.sourceUrl && (
+                <a href={t.sourceUrl} class="inline-flex items-center gap-1 text-sm font-medium text-accent" target="_blank" rel="noopener noreferrer">
+                  Verify <Icon name="external" size={14} />
+                </a>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

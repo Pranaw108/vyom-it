@@ -1,0 +1,203 @@
+---
+import Button from '../ui/Button.astro';
+import Icon from '../ui/Icon.astro';
+import type { Home } from '../../lib/schemas/content';
+
+interface Props {
+  hero: Home['hero'];
+  replyTime: string;
+}
+const { hero, replyTime } = Astro.props;
+const promises = ['Fixed-scope proposals', 'You own the code', `Reply ${replyTime}`];
+---
+
+<section class="hero relative isolate overflow-hidden bg-night text-on-night" aria-labelledby="hero-title">
+  <div class="hero-grid" aria-hidden="true"></div>
+  <!-- Signature horizon arc (brand motif). -->
+  <svg class="hero-arc" viewBox="0 0 1440 420" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="arc-stroke" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0" stop-color="#2e5bff" stop-opacity="0" />
+        <stop offset="0.35" stop-color="#7c9bff" />
+        <stop offset="0.5" stop-color="#ffb547" />
+        <stop offset="0.65" stop-color="#7c9bff" />
+        <stop offset="1" stop-color="#2e5bff" stop-opacity="0" />
+      </linearGradient>
+      <radialGradient id="arc-glow" cx="0.5" cy="1" r="0.6">
+        <stop offset="0" stop-color="#2e5bff" stop-opacity="0.45" />
+        <stop offset="1" stop-color="#2e5bff" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+    <rect x="0" y="0" width="1440" height="420" fill="url(#arc-glow)" class="arc-glow" />
+    <path class="arc-line arc-line--blur" d="M-60 420 C 320 120 1120 120 1500 420" pathLength="1" />
+    <path class="arc-line" d="M-60 420 C 320 120 1120 120 1500 420" pathLength="1" />
+  </svg>
+
+  <div class="container-site relative grid items-center gap-14 pb-28 pt-14 lg:grid-cols-[1.08fr_1fr] lg:pb-44 lg:pt-20">
+    <div class="flex flex-col items-start gap-7">
+      <p class="eyebrow rise-in text-highlight" style="--rise-index:0">{hero.eyebrow}</p>
+      <h1 id="hero-title" class="rise-in text-[2.5rem] font-bold leading-[1.06] sm:text-5xl lg:text-[4rem]" style="--rise-index:1">
+        {hero.headline}
+      </h1>
+      <p class="rise-in max-w-xl text-lg text-on-night-muted sm:text-xl" style="--rise-index:2">{hero.intro}</p>
+      <div class="rise-in flex flex-wrap gap-3" style="--rise-index:3">
+        <Button href={hero.primaryCta.href} size="lg" arrow>{hero.primaryCta.label}</Button>
+        <Button href={hero.secondaryCta.href} size="lg" variant="on-night">{hero.secondaryCta.label}</Button>
+      </div>
+      <ul class="rise-in flex flex-wrap gap-x-6 gap-y-2 text-sm text-on-night-muted" style="--rise-index:4">
+        {promises.map((p) => (
+          <li class="flex items-center gap-2"><Icon name="check" size={16} class="text-highlight" />{p}</li>
+        ))}
+      </ul>
+    </div>
+
+    <!-- Illustrative product composition: browser + phone. No figures shown. -->
+    <div class="hero-visual relative mx-auto w-full max-w-[520px] rise-in" style="--rise-index:3" aria-hidden="true">
+      <div class="browser">
+        <div class="browser-bar"><span></span><span></span><span></span><i></i></div>
+        <div class="grid grid-cols-[88px_1fr] gap-3 p-4">
+          <div class="grid content-start gap-2">
+            <b class="h-2.5 w-14 rounded-full bg-white/25"></b>
+            <b class="h-2 w-16 rounded-full bg-white/10"></b>
+            <b class="h-2 w-12 rounded-full bg-white/10"></b>
+            <b class="h-2 w-14 rounded-full bg-[#7c9bff]/60"></b>
+            <b class="h-2 w-10 rounded-full bg-white/10"></b>
+          </div>
+          <div class="grid gap-3">
+            <div class="h-24 rounded-xl bg-gradient-to-br from-[#2e5bff]/50 to-[#7c9bff]/10 p-3">
+              <b class="block h-2.5 w-28 rounded-full bg-white/60"></b>
+              <b class="mt-2 block h-2 w-40 rounded-full bg-white/25"></b>
+              <b class="mt-4 block h-6 w-20 rounded-full bg-[#ffb547]"></b>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <b class="h-16 rounded-lg bg-white/8"></b>
+              <b class="h-16 rounded-lg bg-white/8"></b>
+              <b class="h-16 rounded-lg bg-white/8"></b>
+            </div>
+            <svg viewBox="0 0 240 60" class="h-14 w-full">
+              <path d="M0 50 C 30 44 50 30 80 34 S 130 12 160 20 S 210 8 240 4" fill="none" stroke="#7c9bff" stroke-width="2" />
+              <path d="M0 50 C 30 44 50 30 80 34 S 130 12 160 20 S 210 8 240 4 V60 H0Z" fill="#7c9bff" opacity="0.12" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="mx-auto mb-3 h-1.5 w-10 rounded-full bg-white/20"></div>
+        <b class="block h-2.5 w-16 rounded-full bg-white/50"></b>
+        <div class="mt-3 grid grid-cols-3 gap-1.5">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <b class:list={['h-6 rounded-md', i === 4 ? 'bg-[#ffb547]' : 'bg-white/10']}></b>
+          ))}
+        </div>
+        <b class="mt-4 block h-8 rounded-lg bg-[#2e5bff]"></b>
+      </div>
+      <div class="chip chip--top"><Icon name="pen" size={16} /> Prototype approved</div>
+      <div class="chip chip--bottom"><Icon name="check" size={16} /> Live on every device</div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    margin-top: -62px;
+    padding-top: 62px;
+  }
+  @media (min-width: 1024px) {
+    .hero { margin-top: -72px; padding-top: 72px; }
+  }
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+  }
+  .hero-arc {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 34%;
+    z-index: -1;
+  }
+  @media (max-width: 1023px) {
+    .hero-arc { height: 22%; }
+  }
+  .arc-line {
+    fill: none;
+    stroke: url(#arc-stroke);
+    stroke-width: 1.6;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    --arc-length: 1;
+    animation: draw-arc 1200ms ease-in-out 300ms forwards;
+  }
+  .arc-line--blur {
+    stroke-width: 10;
+    filter: blur(10px);
+    opacity: 0.6;
+  }
+  .arc-glow { animation: glow-pulse 8s ease-in-out 1.5s infinite; }
+
+  .browser {
+    border-radius: 1.1rem;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.03));
+    backdrop-filter: blur(16px);
+    box-shadow: 0 40px 80px -30px rgb(0 0 0 / 0.7);
+  }
+  .browser b { display: block; }
+  .browser-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  }
+  .browser-bar span { width: 9px; height: 9px; border-radius: 50%; background: rgb(255 255 255 / 0.18); }
+  .browser-bar i { margin-left: 10px; height: 18px; flex: 1; border-radius: 6px; background: rgb(255 255 255 / 0.06); }
+
+  .phone {
+    position: absolute;
+    right: -6%;
+    bottom: -12%;
+    width: 38%;
+    padding: 12px 12px 16px;
+    border-radius: 1.6rem;
+    border: 1px solid rgb(255 255 255 / 0.16);
+    background: #131d36;
+    box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.75);
+    animation: float 7s ease-in-out infinite;
+  }
+  .phone b { display: block; }
+  .chip {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--on-night);
+    background: rgb(19 29 54 / 0.85);
+    border: 1px solid rgb(255 255 255 / 0.14);
+    backdrop-filter: blur(10px);
+    white-space: nowrap;
+  }
+  .chip :global(svg) { color: #ffb547; }
+  .chip--top { top: -16px; left: 8%; animation: float 8s ease-in-out 1s infinite; }
+  .chip--bottom { bottom: -26px; left: -4%; animation: float 9s ease-in-out 2s infinite; }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @media (max-width: 640px) {
+    .phone { right: 0; }
+    .chip--bottom { left: 0; }
+  }
+</style>

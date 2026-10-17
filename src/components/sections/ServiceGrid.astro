@@ -1,0 +1,63 @@
+---
+import Icon from '../ui/Icon.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import type { Service } from '../../lib/schemas/content';
+import { categoryTile } from '../../lib/ui';
+
+interface Props {
+  services: Service[];
+  eyebrow?: string;
+  title?: string;
+  intro?: string;
+}
+const {
+  services,
+  eyebrow = 'What we do',
+  title = 'Four services, one accountable team',
+  intro = 'Most projects need more than one of these. We plan them together so design, build and growth pull in the same direction.',
+} = Astro.props;
+---
+
+<section class="py-24 lg:py-28" aria-labelledby="services-title">
+  <div class="container-site flex flex-col gap-12">
+    <SectionHeading id="services-title" eyebrow={eyebrow} title={title} intro={intro} />
+    <ul class="grid gap-5 sm:grid-cols-2">
+      {services.map((s, i) => (
+        <li data-reveal style={`--reveal-index:${i}`}>
+          <a href={`/services/${s.slug}`} class="service-card group flex h-full flex-col gap-6 rounded-2xl border border-line bg-canvas p-7">
+            <div class="flex items-start justify-between gap-4">
+              <span class:list={['icon-tile grid size-12 place-items-center rounded-xl', categoryTile[s.accent]]}>
+                <Icon name={s.icon} size={24} />
+              </span>
+              <span class="grid size-10 place-items-center rounded-full border border-line text-muted transition-all duration-200 group-hover:border-accent group-hover:bg-accent group-hover:text-on-accent">
+                <Icon name="arrow-up-right" size={18} />
+              </span>
+            </div>
+            <div class="flex flex-col gap-2">
+              <h3 class="text-2xl font-semibold">{s.name}</h3>
+              <p class="text-muted">{s.outcome}</p>
+            </div>
+            <ul class="mt-auto flex flex-wrap gap-2">
+              {s.examples.map((e) => (
+                <li class="rounded-full bg-surface px-3 py-1 text-sm text-muted">{e}</li>
+              ))}
+            </ul>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .service-card {
+    transition: border-color 200ms, box-shadow 200ms, transform 200ms var(--ease-out-soft);
+  }
+  .service-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+    box-shadow: var(--shadow-card);
+    transform: translateY(-2px);
+  }
+  .icon-tile :global(svg) { transition: transform 600ms var(--ease-out-soft); }
+  .service-card:hover .icon-tile :global(svg) { transform: rotate(-8deg) scale(1.08); }
+</style>

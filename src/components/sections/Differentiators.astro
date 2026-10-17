@@ -1,0 +1,34 @@
+---
+import Icon from '../ui/Icon.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import type { Home } from '../../lib/schemas/content';
+
+interface Props {
+  items: Home['differentiators'];
+}
+const { items } = Astro.props;
+---
+
+<section class="bg-surface py-24 lg:py-28" aria-labelledby="why-title">
+  <div class="container-site grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+    <div class="lg:sticky lg:top-28 lg:self-start">
+      <SectionHeading
+        id="why-title"
+        eyebrow="Why Vyom IT"
+        title="A partner you can check, not just trust"
+        intro="No inflated numbers or borrowed logos. Just clear commitments you can hold us to, written into every proposal."
+      />
+    </div>
+    <ul class="grid gap-4 sm:grid-cols-2">
+      {items.map((item, i) => (
+        <li class="flex flex-col gap-4 rounded-2xl border border-line bg-canvas p-6" data-reveal style={`--reveal-index:${i}`}>
+          <span class="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent">
+            <Icon name={item.icon} size={22} />
+          </span>
+          <h3 class="text-xl font-semibold">{item.title}</h3>
+          <p class="text-muted">{item.body}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

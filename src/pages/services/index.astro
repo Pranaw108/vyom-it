@@ -1,0 +1,38 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/sections/PageHero.astro';
+import ServiceGrid from '../../components/sections/ServiceGrid.astro';
+import EngagementModels from '../../components/sections/EngagementModels.astro';
+import Process from '../../components/sections/Process.astro';
+import CtaBand from '../../components/sections/CtaBand.astro';
+import { getEngagementModels, getHome, getServices } from '../../lib/content';
+import { breadcrumbJsonLd } from '../../lib/seo';
+
+const crumbs = [
+  { name: 'Home', path: '/' },
+  { name: 'Services', path: '/services' },
+];
+---
+
+<BaseLayout
+  title="Services: web, mobile, UI/UX and digital marketing"
+  description="Website development, mobile apps, UI/UX design and digital marketing from one accountable team. See what each service includes and how we work."
+  headerTone="night"
+  jsonLd={[breadcrumbJsonLd(crumbs, Astro.site)]}
+>
+  <PageHero
+    breadcrumbs={crumbs}
+    eyebrow="Services"
+    title="Everything you need to launch and grow a digital product"
+    intro="Start with one service or combine them. Either way you get one team, one plan and one point of contact."
+  />
+  <ServiceGrid
+    services={getServices()}
+    eyebrow="Our services"
+    title="Choose where to start"
+    intro="Each service page explains the problems we solve, what you receive and how the work runs."
+  />
+  <EngagementModels models={getEngagementModels()} />
+  <Process steps={getHome().process} />
+  <CtaBand title="Not sure which service you need?" body="Describe your goal and we will recommend the right mix, with a clear proposal and quotation." />
+</BaseLayout>

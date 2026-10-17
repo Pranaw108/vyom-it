@@ -1,0 +1,119 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/sections/PageHero.astro';
+import SectionHeading from '../../components/ui/SectionHeading.astro';
+import Button from '../../components/ui/Button.astro';
+import Icon from '../../components/ui/Icon.astro';
+import EngagementModels from '../../components/sections/EngagementModels.astro';
+import Process from '../../components/sections/Process.astro';
+import Capabilities from '../../components/sections/Capabilities.astro';
+import FeaturedWork from '../../components/sections/FeaturedWork.astro';
+import Faq from '../../components/sections/Faq.astro';
+import CtaBand from '../../components/sections/CtaBand.astro';
+import { getEngagementModels, getHome, getServices, getSettings, getWorkForService } from '../../lib/content';
+import { breadcrumbJsonLd, faqJsonLd, serviceJsonLd } from '../../lib/seo';
+import { categoryTile } from '../../lib/ui';
+import type { Service } from '../../lib/schemas/content';
+
+export function getStaticPaths() {
+  return getServices().map((service) => ({ params: { slug: service.slug }, props: { service } }));
+}
+
+interface Props {
+  service: Service;
+}
+const { service } = Astro.props;
+const settings = getSettings();
+const quoteHref = `/quote?service=${service.slug}`;
+const crumbs = [
+  { name: 'Home', path: '/' },
+  { name: 'Services', path: '/services' },
+  { name: service.name, path: `/services/${service.slug}` },
+];
+const pageUrl = new URL(`/services/${service.slug}`, Astro.site).toString();
+---
+
+<BaseLayout
+  title={service.seo.title}
+  description={service.seo.description}
+  headerTone="night"
+  jsonLd={[
+    breadcrumbJsonLd(crumbs, Astro.site),
+    serviceJsonLd(service.name, service.seo.description, settings.companyName, pageUrl),
+    faqJsonLd(service.faqs),
+  ]}
+>
+  <PageHero breadcrumbs={crumbs} eyebrow={service.name} title={service.hero.headline} intro={service.hero.intro}>
+    <div class="rise-in flex flex-wrap gap-3 pt-2" style="--rise-index:4">
+      <Button href={quoteHref} size="lg" arrow>Get a quote</Button>
+      <Button href="#deliverables" size="lg" variant="on-night">What's included</Button>
+    </div>
+  </PageHero>
+
+  <section class="py-24" aria-labelledby="problems-title">
+    <div class="container-site flex flex-col gap-12">
+      <SectionHeading id="problems-title" eyebrow="Problems we solve" title="Sound familiar?" />
+      <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {service.problems.map((p, i) => (
+          <li class="flex flex-col gap-3 rounded-2xl border border-line bg-canvas p-6" data-reveal style={`--reveal-index:${i}`}>
+            <span class:list={['grid size-10 place-items-center rounded-lg', categoryTile[service.accent]]}><Icon name={service.icon} size={20} /></span>
+            <h3 class="text-lg font-semibold">{p.title}</h3>
+            <p class="text-muted">{p.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section id="deliverables" class="bg-surface py-24" aria-labelledby="deliverables-title">
+    <div class="container-site grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+      <div class="flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start">
+        <SectionHeading id="deliverables-title" eyebrow="What you get" title="Deliverables, written down" intro={service.summary} />
+        <Button href={quoteHref} arrow class="self-start">Request a proposal</Button>
+      </div>
+      <ol class="grid gap-4 sm:grid-cols-2">
+        {service.deliverables.map((d, i) => (
+          <li class="flex flex-col gap-2 rounded-2xl border border-line bg-canvas p-6" data-reveal style={`--reveal-index:${i % 4}`}>
+            <span class="flex items-center gap-2 text-success"><Icon name="check" size={18} /><span class="sr-only">Included:</span></span>
+            <h3 class="text-lg font-semibold">{d.title}</h3>
+            <p class="text-muted">{d.body}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <Process steps={getHome().process} notes={service.processNotes} title={`${service.name}: how the work runs`} />
+  <EngagementModels models={getEngagementModels()} />
+  <Capabilities groups={service.technologies} title="Tools we use for this work" />
+  <FeaturedWork projects={getWorkForService(service.slug)} title="Related work" />
+  <Faq faqs={service.faqs} title={`${service.name}: common questions`} />
+
+  {service.disclaimer && (
+    <div class="container-site">
+      <p class="flex items-start gap-3 rounded-2xl border border-line bg-surface p-5 text-sm text-muted">
+        <Icon name="shield" size={18} class="mt-0.5 shrink-0 text-accent" />
+        {service.disclaimer}
+      </p>
+    </div>
+  )}
+
+  <CtaBand title="Ready to talk about your project?" ctaHref={quoteHref} />
+
+  <!-- Mobile quick action, hidden on large screens. -->
+  <div class="mobile-cta lg:hidden">
+    <Button href={quoteHref} class="w-full" arrow>Get a quote</Button>
+  </div>
+</BaseLayout>
+
+<style>
+  .mobile-cta {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    background: color-mix(in srgb, var(--canvas) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+  }
+</style>

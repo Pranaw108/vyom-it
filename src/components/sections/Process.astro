@@ -1,0 +1,54 @@
+---
+import Icon from '../ui/Icon.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import type { Home } from '../../lib/schemas/content';
+
+interface Props {
+  steps: Home['process'];
+  // Optional service-specific note under each step.
+  notes?: string[];
+  title?: string;
+}
+const { steps, notes, title = 'How a project runs, step by step' } = Astro.props;
+---
+
+<section id="process" class="relative overflow-hidden bg-night py-24 text-on-night lg:py-28" aria-labelledby="process-title">
+  <div class="container-site flex flex-col gap-14">
+    <SectionHeading
+      id="process-title"
+      tone="night"
+      eyebrow="How we work"
+      title={title}
+      intro="You see progress every week and approve each stage before the next one starts."
+    />
+    <ol class="process-list grid gap-8 sm:grid-cols-2 lg:grid-cols-5 lg:gap-5">
+      {steps.map((step, i) => (
+        <li class="relative flex flex-col gap-4" data-reveal style={`--reveal-index:${i}`}>
+          <div class="flex items-center gap-3">
+            <span class="step-dot grid size-12 shrink-0 place-items-center rounded-full border border-white/15 bg-night-2 text-highlight">
+              <Icon name={step.icon} size={22} />
+            </span>
+            <span class="font-mono text-xs tracking-widest text-on-night-muted">0{i + 1}</span>
+          </div>
+          <h3 class="text-xl font-semibold">{step.title}</h3>
+          <p class="text-on-night-muted">{step.body}</p>
+          {notes?.[i] && <p class="text-sm text-highlight/90">{notes[i]}</p>}
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  @media (min-width: 1024px) {
+    .process-list li:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      top: 24px;
+      left: 56px;
+      right: -12px;
+      height: 1px;
+      background: linear-gradient(to right, rgb(255 181 71 / 0.5), rgb(255 255 255 / 0.08));
+    }
+  }
+</style>

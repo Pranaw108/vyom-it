@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/sections/PageHero.astro';
+import ContactAside from '../components/sections/ContactAside.astro';
+import QuoteForm from '../components/forms/QuoteForm';
+import { getSettings } from '../lib/content';
+import { breadcrumbJsonLd } from '../lib/seo';
+
+const settings = getSettings();
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
+const crumbs = [
+  { name: 'Home', path: '/' },
+  { name: 'Request a quote', path: '/quote' },
+];
+---
+
+<BaseLayout
+  title="Request a quote"
+  description="Tell us about your website, app, design or marketing project in three short steps. We reply with questions, ideas and a clear quotation."
+  headerTone="night"
+  jsonLd={[breadcrumbJsonLd(crumbs, Astro.site)]}
+>
+  <PageHero
+    breadcrumbs={crumbs}
+    eyebrow="Request a quote"
+    title="Tell us about your project"
+    intro="Three short steps, about two minutes. The more you share, the more useful our first reply will be."
+  />
+
+  <section class="container-site grid gap-12 py-20 lg:grid-cols-[1.4fr_1fr] lg:gap-16">
+    <div class="min-w-0">
+      <QuoteForm client:load siteKey={siteKey} email={settings.email} replyTime={settings.replyTime} />
+      <noscript>
+        <p class="mt-4 rounded-xl border border-line p-4">This form needs JavaScript. {settings.email ? `Please email us at ${settings.email}.` : 'Please enable JavaScript to send your request.'}</p>
+      </noscript>
+    </div>
+    <ContactAside />
+  </section>
+</BaseLayout>

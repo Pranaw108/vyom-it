@@ -1,0 +1,158 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/layout/Breadcrumbs.astro';
+import ConceptCover from '../../components/work/ConceptCover.astro';
+import TypeBadge from '../../components/work/TypeBadge.astro';
+import SectionHeading from '../../components/ui/SectionHeading.astro';
+import Icon from '../../components/ui/Icon.astro';
+import CtaBand from '../../components/sections/CtaBand.astro';
+import { getCaseStudies, serviceName } from '../../lib/content';
+import { breadcrumbJsonLd } from '../../lib/seo';
+import type { CaseStudy } from '../../lib/schemas/content';
+
+export function getStaticPaths() {
+  const projects = getCaseStudies();
+  return projects.map((project, i) => ({
+    params: { slug: project.slug },
+    props: { project, next: projects[(i + 1) % projects.length] },
+  }));
+}
+
+interface Props {
+  project: CaseStudy;
+  next: CaseStudy;
+}
+const { project, next } = Astro.props;
+const crumbs = [
+  { name: 'Home', path: '/' },
+  { name: 'Work', path: '/work' },
+  { name: project.title, path: `/work/${project.slug}` },
+];
+const primaryService = project.services[0];
+const facts = [
+  { label: 'Type', value: project.type === 'concept' ? 'Concept project' : 'Client project' },
+  { label: 'Industry', value: project.industry },
+  { label: 'Services', value: project.services.map(serviceName).join(', ') },
+  { label: 'Timeline', value: project.duration },
+];
+---
+
+<BaseLayout
+  title={project.seo.title}
+  description={project.seo.description}
+  type="article"
+  jsonLd={[breadcrumbJsonLd(crumbs, Astro.site)]}
+>
+  <article>
+    <header class="container-site flex flex-col gap-8 pb-12 pt-10 lg:pt-14">
+      <Breadcrumbs items={crumbs} />
+      <div class="flex max-w-3xl flex-col gap-5">
+        <div class="rise-in flex flex-wrap items-center gap-3"><TypeBadge type={project.type} /><span class="text-sm text-muted">{project.industry}</span></div>
+        <h1 class="rise-in text-4xl font-bold leading-[1.08] sm:text-5xl" style="--rise-index:1">{project.title}</h1>
+        <p class="rise-in text-xl text-muted" style="--rise-index:2">{project.summary}</p>
+      </div>
+      {project.type === 'concept' && (
+        <p class="flex max-w-3xl items-start gap-3 rounded-xl border border-line bg-surface p-4 text-sm text-muted">
+          <Icon name="sparkles" size={18} class="mt-0.5 shrink-0 text-cat-amber" />
+          This is a self-initiated concept project created to show our approach. It is not client work, and it does not report real users or results.
+        </p>
+      )}
+    </header>
+
+    <div class="container-site">
+      <div class="rise-in overflow-hidden rounded-3xl border border-line" style="--rise-index:3">
+        <ConceptCover variant={project.cover} />
+      </div>
+      <dl class="mt-8 grid gap-6 border-b border-line pb-10 sm:grid-cols-2 lg:grid-cols-4">
+        {facts.map((f) => (
+          <div class="flex flex-col gap-1">
+            <dt class="eyebrow text-muted">{f.label}</dt>
+            <dd class="font-medium">{f.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+
+    <section class="container-site grid gap-10 py-20 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16" aria-labelledby="challenge-title">
+      <SectionHeading id="challenge-title" eyebrow="The challenge" title="What needed solving" />
+      <p class="text-xl leading-relaxed" data-reveal>{project.challenge}</p>
+    </section>
+
+    <section class="bg-surface py-20" aria-labelledby="approach-title">
+      <div class="container-site flex flex-col gap-12">
+        <SectionHeading id="approach-title" eyebrow="Our approach" title="Decisions that shaped the design" />
+        <ol class="grid gap-5 md:grid-cols-3">
+          {project.approach.map((a, i) => (
+            <li class="flex flex-col gap-3 rounded-2xl border border-line bg-canvas p-6" data-reveal style={`--reveal-index:${i}`}>
+              <span class="font-mono text-sm text-accent">0{i + 1}</span>
+              <h3 class="text-lg font-semibold">{a.title}</h3>
+              <p class="text-muted">{a.body}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="container-site flex flex-col gap-12 py-20" aria-labelledby="solution-title">
+      <SectionHeading id="solution-title" eyebrow="The solution" title="What we designed" />
+      <ul class="grid gap-5 md:grid-cols-3">
+        {project.solution.map((s, i) => (
+          <li class="flex flex-col gap-3 border-t-2 border-accent pt-5" data-reveal style={`--reveal-index:${i}`}>
+            <h3 class="text-lg font-semibold">{s.title}</h3>
+            <p class="text-muted">{s.body}</p>
+          </li>
+        ))}
+      </ul>
+      <div class="flex flex-col gap-3">
+        <p class="eyebrow text-muted">Technology</p>
+        <ul class="flex flex-wrap gap-2">
+          {project.technologies.map((t) => <li class="rounded-lg border border-line px-3 py-1.5 text-sm font-medium">{t}</li>)}
+        </ul>
+      </div>
+    </section>
+
+    <section class="bg-night py-20 text-on-night" aria-labelledby="outcome-title">
+      <div class="container-site flex flex-col gap-10">
+        {project.type === 'concept' ? (
+          <>
+            <SectionHeading id="outcome-title" tone="night" eyebrow="Goals" title="What success would look like" intro="For a real client we would agree these goals up front, measure a baseline, and report progress after launch." />
+            <ul class="grid gap-4 md:grid-cols-3">
+              {project.goals.map((g) => (
+                <li class="flex items-start gap-3 rounded-2xl border border-white/10 bg-night-2 p-6"><Icon name="flag" size={20} class="mt-0.5 shrink-0 text-highlight" />{g}</li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <SectionHeading id="outcome-title" tone="night" eyebrow="Outcomes" title="What changed" />
+            <dl class="grid gap-4 md:grid-cols-3">
+              {project.outcomes.map((o) => (
+                <div class="flex flex-col gap-2 rounded-2xl border border-white/10 bg-night-2 p-6">
+                  <dt class="order-2">{o.label}</dt>
+                  <dd class="order-1 font-display text-4xl font-bold text-highlight">{o.value}</dd>
+                  <p class="text-xs text-on-night-muted">Source: {o.source}</p>
+                </div>
+              ))}
+            </dl>
+          </>
+        )}
+      </div>
+    </section>
+
+    {next.slug !== project.slug && (
+      <nav class="container-site py-16" aria-label="Next project">
+        <a href={`/work/${next.slug}`} class="group grid items-center gap-6 rounded-3xl border border-line p-6 transition-colors hover:border-accent md:grid-cols-[280px_1fr_auto]">
+          <div class="overflow-hidden rounded-2xl"><ConceptCover variant={next.cover} /></div>
+          <div class="flex flex-col gap-2">
+            <span class="eyebrow text-muted">Next project</span>
+            <span class="font-display text-2xl font-semibold">{next.title}</span>
+            <span class="text-muted">{next.summary}</span>
+          </div>
+          <Icon name="arrow-right" size={28} class="text-accent transition-transform group-hover:translate-x-1" />
+        </a>
+      </nav>
+    )}
+  </article>
+
+  <CtaBand title="Want something like this for your business?" ctaLabel="Start a similar project" ctaHref={`/quote?service=${primaryService}`} />
+</BaseLayout>

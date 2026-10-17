@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/sections/Hero.astro';
+import ServiceGrid from '../components/sections/ServiceGrid.astro';
+import Differentiators from '../components/sections/Differentiators.astro';
+import FeaturedWork from '../components/sections/FeaturedWork.astro';
+import Process from '../components/sections/Process.astro';
+import Capabilities from '../components/sections/Capabilities.astro';
+import Testimonials from '../components/sections/Testimonials.astro';
+import Faq from '../components/sections/Faq.astro';
+import CtaBand from '../components/sections/CtaBand.astro';
+import { getFeaturedWork, getHome, getServices, getSettings, getTestimonials } from '../lib/content';
+import { faqJsonLd } from '../lib/seo';
+
+const settings = getSettings();
+const home = getHome();
+---
+
+<BaseLayout
+  title={`${settings.companyName}: websites, mobile apps, UI/UX and SEO`}
+  description={settings.description}
+  headerTone="night"
+  jsonLd={[faqJsonLd(home.faqs)]}
+>
+  <Hero hero={home.hero} replyTime={settings.replyTime} />
+  <ServiceGrid services={getServices()} />
+  <Differentiators items={home.differentiators} />
+  <FeaturedWork projects={getFeaturedWork()} />
+  <Process steps={home.process} />
+  <Capabilities groups={home.capabilities} />
+  <Testimonials items={getTestimonials()} />
+  <Faq faqs={home.faqs} />
+  <CtaBand />
+</BaseLayout>

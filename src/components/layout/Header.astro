@@ -1,0 +1,243 @@
+---
+import Logo from './Logo.astro';
+import Icon from '../ui/Icon.astro';
+import Button from '../ui/Button.astro';
+import { getServices, hasInsights } from '../../lib/content';
+import { categoryTile } from '../../lib/ui';
+
+interface Props {
+  tone?: 'default' | 'night';
+}
+const { tone = 'default' } = Astro.props;
+
+const path = Astro.url.pathname;
+const services = getServices();
+const links = [
+  { label: 'Work', href: '/work' },
+  { label: 'About', href: '/about' },
+  ...(hasInsights() ? [{ label: 'Insights', href: '/insights' }] : []),
+  { label: 'Contact', href: '/contact' },
+];
+const isActive = (href: string) => path === href || path.startsWith(`${href}/`);
+const servicesActive = isActive('/services');
+
+const accentClass = categoryTile;
+---
+
+<header class="site-header sticky top-0 z-40" data-header data-tone={tone}>
+  <div class="header-bar">
+    <div class="container-site flex items-center justify-between gap-6 header-inner">
+      <span class="header-fg"><Logo /></span>
+
+      <nav aria-label="Main" class="hidden lg:block">
+        <ul class="flex items-center gap-1">
+          <li class="relative" data-dropdown>
+            <button
+              type="button"
+              class:list={['nav-link inline-flex items-center gap-1', servicesActive && 'is-active']}
+              aria-expanded="false"
+              aria-controls="services-menu"
+              data-dropdown-trigger
+            >
+              Services
+              <Icon name="chevron-down" size={16} class="transition-transform duration-200 [[aria-expanded=true]>&]:rotate-180" />
+            </button>
+            <div id="services-menu" class="dropdown-panel" hidden data-dropdown-panel>
+              <ul class="grid grid-cols-2 gap-1">
+                {services.map((s) => (
+                  <li>
+                    <a href={`/services/${s.slug}`} class="group flex gap-3 rounded-xl p-3 transition-colors hover:bg-mist" aria-current={isActive(`/services/${s.slug}`) ? 'page' : undefined}>
+                      <span class:list={['grid size-10 shrink-0 place-items-center rounded-lg', accentClass[s.accent]]}>
+                        <Icon name={s.icon} size={20} />
+                      </span>
+                      <span class="flex flex-col">
+                        <span class="font-medium text-ink">{s.name}</span>
+                        <span class="text-sm leading-snug text-muted">{s.outcome}</span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <a href="/services" class="mt-2 flex items-center justify-between rounded-xl bg-mist px-4 py-3 text-sm font-medium text-ink hover:text-accent">
+                Compare all services and how we work together
+                <Icon name="arrow-right" size={16} />
+              </a>
+            </div>
+          </li>
+          {links.map((l) => (
+            <li>
+              <a href={l.href} class:list={['nav-link', isActive(l.href) && 'is-active']} aria-current={isActive(l.href) ? 'page' : undefined}>
+                {l.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <Button href="/quote" class="max-sm:hidden">Get a quote</Button>
+        <button type="button" class="menu-button header-fg lg:hidden" aria-label="Open menu" aria-controls="mobile-menu" aria-expanded="false" data-menu-open>
+          <Icon name="menu" size={24} />
+        </button>
+        <a href="#footer-nav" class="nojs-menu header-fg lg:hidden">Menu</a>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="mobile-menu" class="menu-sheet" aria-label="Menu" data-menu>
+    <div class="flex h-full flex-col">
+      <div class="flex items-center justify-between border-b border-line px-5 py-4">
+        <Logo class="text-ink" />
+        <button type="button" class="menu-button text-ink" aria-label="Close menu" data-menu-close>
+          <Icon name="x" size={24} />
+        </button>
+      </div>
+      <nav aria-label="Mobile" class="flex-1 overflow-y-auto px-5 py-6">
+        <p class="eyebrow mb-3 text-muted">Services</p>
+        <ul class="mb-6 grid gap-1">
+          {services.map((s, i) => (
+            <li class="menu-item" style={`--i:${i}`}>
+              <a href={`/services/${s.slug}`} class:list={['mobile-link', isActive(`/services/${s.slug}`) && 'is-active']} aria-current={isActive(`/services/${s.slug}`) ? 'page' : undefined}>
+                <span class:list={['grid size-9 place-items-center rounded-lg', accentClass[s.accent]]}><Icon name={s.icon} size={18} /></span>
+                {s.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <ul class="grid gap-1 border-t border-line pt-6">
+          {[{ label: 'All services', href: '/services' }, ...links].map((l, i) => (
+            <li class="menu-item" style={`--i:${i + services.length}`}>
+              <a href={l.href} class:list={['mobile-link text-lg', isActive(l.href) && 'is-active']} aria-current={path === l.href ? 'page' : undefined}>{l.label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div class="border-t border-line p-5 pb-[max(20px,env(safe-area-inset-bottom))]">
+        <Button href="/quote" size="lg" class="w-full" arrow>Get a quote</Button>
+      </div>
+    </div>
+  </dialog>
+</header>
+
+<style>
+  .site-header {
+    --h-fg: var(--ink);
+    --h-bg: color-mix(in srgb, var(--canvas) 84%, transparent);
+    --h-border: var(--line);
+  }
+  .site-header[data-tone='night']:not([data-compact]) {
+    --h-fg: var(--on-night);
+    --h-bg: transparent;
+    --h-border: transparent;
+  }
+  .header-bar {
+    background: var(--h-bg);
+    border-bottom: 1px solid var(--h-border);
+    backdrop-filter: saturate(1.6) blur(14px);
+    -webkit-backdrop-filter: saturate(1.6) blur(14px);
+    transition: background-color 200ms, border-color 200ms;
+  }
+  /* Fixed height: changing it on scroll would shift the page (AC-A5). Only the surface changes. */
+  .header-inner { height: 72px; }
+  .site-header[data-compact] .header-bar { box-shadow: 0 6px 24px -18px rgb(11 19 36 / 0.45); }
+  @media (max-width: 1023px) {
+    .header-inner { height: 62px; }
+  }
+  .header-fg { color: var(--h-fg); }
+
+  .nav-link {
+    position: relative;
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--h-fg);
+    opacity: 0.85;
+    transition: opacity 150ms, background-color 150ms;
+  }
+  .nav-link:hover, .nav-link[aria-expanded='true'] { opacity: 1; background: color-mix(in srgb, var(--h-fg) 8%, transparent); }
+  .nav-link.is-active { opacity: 1; }
+  .nav-link.is-active::after {
+    content: '';
+    position: absolute;
+    left: 0.85rem;
+    right: 0.85rem;
+    bottom: 0.2rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .dropdown-panel {
+    position: absolute;
+    left: -1rem;
+    top: calc(100% + 0.75rem);
+    width: min(620px, 90vw);
+    padding: 0.75rem;
+    border-radius: 1.25rem;
+    border: 1px solid var(--line);
+    background: var(--canvas);
+    box-shadow: var(--shadow-card);
+    animation: drop-in 160ms var(--ease-out-soft);
+  }
+  @keyframes drop-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .menu-button {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+  }
+  .menu-button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+  @media (min-width: 1024px) {
+    .header-bar .menu-button { display: none; }
+  }
+  .nojs-menu { display: none; font-weight: 500; padding: 0.5rem; }
+  :global(html:not(.js)) .menu-button { display: none; }
+  :global(html:not(.js)) .nojs-menu { display: inline-block; }
+  @media (min-width: 1024px) {
+    :global(html:not(.js)) .nojs-menu { display: none; }
+  }
+
+  .menu-sheet {
+    margin: 0 0 0 auto;
+    width: min(100%, 420px);
+    max-width: 100%;
+    height: 100dvh;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    transform: translateX(100%);
+    transition: transform 260ms var(--ease-out-soft), overlay 260ms allow-discrete, display 260ms allow-discrete;
+  }
+  .menu-sheet[open] { transform: none; }
+  @starting-style {
+    .menu-sheet[open] { transform: translateX(100%); }
+  }
+  .menu-sheet::backdrop {
+    background: rgb(7 13 26 / 0.55);
+    backdrop-filter: blur(2px);
+  }
+  .mobile-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    min-height: 44px;
+  }
+  .mobile-link:hover { background: var(--mist); }
+  .mobile-link.is-active { background: var(--accent-soft); color: var(--accent); }
+  .menu-sheet[open] .menu-item {
+    animation: rise-in 300ms var(--ease-out-soft) both;
+    animation-delay: calc(var(--i) * 30ms + 80ms);
+  }
+</style>

@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Cloudflare's documented Turnstile test keys (always pass). Not secrets.
+      PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      PUBLIC_INDEXING: 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Local secrets and database for browser tests
+        run: |
+          printf 'TURNSTILE_SECRET=1x0000000000000000000000000000000AA\nIP_HASH_SALT=ci-salt\nRESEND_API_KEY=\n' > .dev.vars
+          npx wrangler d1 migrations apply vyom-website --local
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser and accessibility tests
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7

@@ -1,0 +1,32 @@
+---
+import SectionHeading from '../ui/SectionHeading.astro';
+
+interface Props {
+  groups: { group: string; items: string[] }[];
+  title?: string;
+  intro?: string;
+}
+const {
+  groups,
+  title = 'Proven tools, chosen for your project',
+  intro = 'We pick technology for reliability, cost and how easy it is to maintain, not because it is fashionable.',
+} = Astro.props;
+---
+
+<section class="border-y border-line bg-surface py-20" aria-labelledby="cap-title">
+  <div class="container-site grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+    <SectionHeading id="cap-title" eyebrow="Capabilities" title={title} intro={intro} />
+    <dl class="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+      {groups.map((g, i) => (
+        <div class="flex flex-col gap-3 border-t border-line-strong pt-4" data-reveal style={`--reveal-index:${i}`}>
+          <dt class="eyebrow text-muted">{g.group}</dt>
+          <dd class="flex flex-wrap gap-2">
+            {g.items.map((item) => (
+              <span class="rounded-lg border border-line bg-canvas px-3 py-1.5 text-sm font-medium">{item}</span>
+            ))}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+</section>

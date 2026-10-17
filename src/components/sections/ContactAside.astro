@@ -1,0 +1,41 @@
+---
+import Icon from '../ui/Icon.astro';
+import { getSettings } from '../../lib/content';
+
+// "What happens next" (FR-167) plus direct contact options that exist in Settings.
+const settings = getSettings();
+const steps = [
+  { title: 'We read and reply', body: `A real person reads your request and replies ${settings.replyTime}.` },
+  { title: 'A short call', body: 'Thirty minutes to understand your goals, users and constraints. No sales pitch.' },
+  { title: 'A written proposal', body: 'Scope, timeline and a clear quotation, usually within 3 working days of the call.' },
+];
+const whatsappUrl = settings.whatsapp
+  ? `https://wa.me/${settings.whatsapp}?text=${encodeURIComponent(`Hi ${settings.companyName}, I'd like to talk about a project.`)}`
+  : null;
+---
+
+<aside class="flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start">
+  <div class="rounded-3xl bg-night p-7 text-on-night">
+    <h2 class="text-xl font-semibold">What happens next</h2>
+    <ol class="mt-5 grid gap-5">
+      {steps.map((s, i) => (
+        <li class="flex gap-4">
+          <span class="grid size-8 shrink-0 place-items-center rounded-full bg-white/10 font-mono text-sm text-highlight">{i + 1}</span>
+          <span class="flex flex-col gap-1"><span class="font-semibold">{s.title}</span><span class="text-sm text-on-night-muted">{s.body}</span></span>
+        </li>
+      ))}
+    </ol>
+  </div>
+
+  <div class="flex flex-col gap-4 rounded-3xl border border-line p-7">
+    <h2 class="text-lg font-semibold">Prefer to reach us directly?</h2>
+    <ul class="grid gap-3 text-muted">
+      {settings.email && <li class="flex items-center gap-3"><Icon name="mail" size={18} /><a href={`mailto:${settings.email}`} class="select-all text-ink hover:text-accent">{settings.email}</a></li>}
+      {settings.phone && <li class="flex items-center gap-3"><Icon name="phone" size={18} /><a href={`tel:${settings.phone.replace(/\s/g, '')}`} class="text-ink hover:text-accent">{settings.phone}</a></li>}
+      {whatsappUrl && <li class="flex items-center gap-3"><Icon name="message" size={18} /><a href={whatsappUrl} target="_blank" rel="noopener noreferrer" class="text-ink hover:text-accent">Chat on WhatsApp</a></li>}
+      {settings.bookingUrl && <li class="flex items-center gap-3"><Icon name="clock" size={18} /><a href={settings.bookingUrl} target="_blank" rel="noopener noreferrer" class="text-ink hover:text-accent">Book a 30-minute call</a></li>}
+      {settings.address && <li class="flex items-start gap-3"><Icon name="map-pin" size={18} class="mt-1" /><span>{settings.address.line}<br /><a href={settings.address.mapUrl} target="_blank" rel="noopener noreferrer" class="text-sm text-accent">Open in Google Maps</a></span></li>}
+      <li class="flex items-start gap-3"><Icon name="clock" size={18} class="mt-1" /><span>{settings.businessHours}</span></li>
+    </ul>
+  </div>
+</aside>

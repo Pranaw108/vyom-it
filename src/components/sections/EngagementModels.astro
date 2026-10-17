@@ -1,0 +1,35 @@
+---
+import SectionHeading from '../ui/SectionHeading.astro';
+import Icon from '../ui/Icon.astro';
+import type { EngagementModel } from '../../lib/schemas/content';
+
+interface Props {
+  models: EngagementModel[];
+}
+const { models } = Astro.props;
+---
+
+<section class="py-24" aria-labelledby="models-title">
+  <div class="container-site flex flex-col gap-12">
+    <SectionHeading
+      id="models-title"
+      eyebrow="Ways to work together"
+      title="Pick the model that fits your project"
+      intro="Every engagement starts with a written proposal: scope, timeline and a quotation tailored to your project."
+    />
+    <ul class="grid gap-5 md:grid-cols-3">
+      {models.map((m, i) => (
+        <li class="flex flex-col gap-4 rounded-2xl border border-line bg-canvas p-7" data-reveal style={`--reveal-index:${i}`}>
+          <h3 class="text-xl font-semibold">{m.name}</h3>
+          <p class="eyebrow text-accent">Best for: {m.bestFor}</p>
+          <p class="text-muted">{m.description}</p>
+          <ul class="mt-auto grid gap-2 border-t border-line pt-4">
+            {m.points.map((p) => (
+              <li class="flex items-start gap-2 text-sm"><Icon name="check" size={16} class="mt-1 shrink-0 text-success" />{p}</li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

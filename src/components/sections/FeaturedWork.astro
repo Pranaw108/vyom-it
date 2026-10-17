@@ -1,0 +1,34 @@
+---
+import SectionHeading from '../ui/SectionHeading.astro';
+import Button from '../ui/Button.astro';
+import ProjectCard from '../work/ProjectCard.astro';
+import type { CaseStudy } from '../../lib/schemas/content';
+
+interface Props {
+  projects: CaseStudy[];
+  title?: string;
+}
+const { projects, title } = Astro.props;
+const allConcept = projects.every((p) => p.type === 'concept');
+// FR-017: wording changes when the work shown is concept work.
+const heading = title ?? (allConcept ? 'Selected concept work' : 'Selected work');
+const intro = allConcept
+  ? 'Self-initiated projects that show how we think, design and build. Client case studies will join them as projects launch.'
+  : 'A few projects we are proud of, with the problem, the approach and what changed.';
+---
+
+{projects.length > 0 && (
+  <section class="py-24 lg:py-28" aria-labelledby="work-title">
+    <div class="container-site flex flex-col gap-12">
+      <div class="flex flex-wrap items-end justify-between gap-6">
+        <SectionHeading id="work-title" eyebrow="Our work" title={heading} intro={intro} />
+        <Button href="/work" variant="secondary" arrow>All projects</Button>
+      </div>
+      <ul class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {projects.map((p, i) => (
+          <li data-reveal style={`--reveal-index:${i}`}><ProjectCard project={p} /></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}

@@ -1,0 +1,38 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "vyom-website",
+	"compatibility_date": "2026-10-12",
+	"compatibility_flags": ["global_fetch_strictly_public"],
+	// Custom entry adds the scheduled handler (email retries, retention) around Astro's handler.
+	"main": "./src/worker.ts",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	},
+	// Non-secret settings. Secrets (TURNSTILE_SECRET, RESEND_API_KEY, IP_HASH_SALT) are set with
+	// `wrangler secret put` in production and in .dev.vars locally. See docs/ENVIRONMENT.md.
+	"vars": {
+		"SITE_URL": "http://localhost:4321",
+		"COMPANY_NAME": "Vyom IT",
+		"LEAD_NOTIFY_TO": "",
+		"LEAD_ACK_ENABLED": "false",
+		"LEAD_REPLY_TIME": "within 1 working day",
+		"MAIL_FROM": ""
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "vyom-website",
+			// Replaced with the real id when the client's Cloudflare account is set up.
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "migrations"
+		}
+	],
+	"triggers": {
+		// Every 15 minutes: retry lead emails. Daily at 03:00 UTC: retention clean-up.
+		"crons": ["*/15 * * * *", "0 3 * * *"]
+	}
+}

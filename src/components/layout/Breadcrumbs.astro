@@ -1,0 +1,25 @@
+---
+interface Props {
+  items: { name: string; path: string }[];
+  tone?: 'default' | 'night';
+}
+const { items, tone = 'default' } = Astro.props;
+const night = tone === 'night';
+---
+
+<nav aria-label="Breadcrumb">
+  <ol class:list={['flex flex-wrap items-center gap-2 text-sm', night ? 'text-on-night-muted' : 'text-muted']}>
+    {items.map((item, i) => (
+      <li class="flex items-center gap-2">
+        {i < items.length - 1 ? (
+          <>
+            <a href={item.path} class:list={['hover:underline', night ? 'hover:text-on-night' : 'hover:text-ink']}>{item.name}</a>
+            <span aria-hidden="true">/</span>
+          </>
+        ) : (
+          <span aria-current="page" class:list={night ? 'text-on-night' : 'text-ink'}>{item.name}</span>
+        )}
+      </li>
+    ))}
+  </ol>
+</nav>

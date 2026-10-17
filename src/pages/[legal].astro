@@ -1,0 +1,51 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumbs from '../components/layout/Breadcrumbs.astro';
+import { legalPages, legalReviewed, lastUpdated, type LegalSlug } from '../data/legal';
+import { getSettings } from '../lib/content';
+
+export function getStaticPaths() {
+  return (Object.keys(legalPages) as LegalSlug[]).map((legal) => ({ params: { legal } }));
+}
+
+const slug = Astro.params.legal as LegalSlug;
+const page = legalPages[slug];
+const { companyName } = getSettings();
+const fill = (text: string) => text.replaceAll('{company}', companyName);
+const crumbs = [
+  { name: 'Home', path: '/' },
+  { name: page.title, path: `/${slug}` },
+];
+const others = (Object.keys(legalPages) as LegalSlug[]).filter((s) => s !== slug);
+---
+
+<BaseLayout title={page.title} description={page.description}>
+  <article class="container-site grid gap-12 py-12 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-16 lg:py-16">
+    <aside class="hidden lg:block">
+      <nav aria-label="On this page" class="sticky top-28 flex flex-col gap-2 text-sm">
+        <p class="eyebrow mb-2 text-muted">On this page</p>
+        {page.sections.map((s, i) => <a href={`#section-${i + 1}`} class="text-muted hover:text-accent">{s.heading}</a>)}
+      </nav>
+    </aside>
+    <div class="flex max-w-3xl flex-col gap-8">
+      <Breadcrumbs items={crumbs} />
+      <header class="flex flex-col gap-4">
+        <h1 class="text-4xl font-bold sm:text-5xl">{page.title}</h1>
+        <p class="text-sm text-muted">Last updated: {lastUpdated}</p>
+        {!legalReviewed && (
+          <p class="rounded-xl border border-line bg-surface p-4 text-sm text-muted">This page is a draft and is being reviewed. It describes how this website currently handles information.</p>
+        )}
+        <p class="text-lg">{fill(page.intro)}</p>
+      </header>
+      {page.sections.map((s, i) => (
+        <section id={`section-${i + 1}`} class="flex flex-col gap-3 border-t border-line pt-6">
+          <h2 class="text-2xl font-semibold">{s.heading}</h2>
+          {s.body.map((p) => <p class="leading-relaxed text-muted">{fill(p)}</p>)}
+        </section>
+      ))}
+      <nav aria-label="Other policies" class="flex flex-wrap gap-4 border-t border-line pt-6 text-sm">
+        {others.map((s) => <a href={`/${s}`} class="font-medium text-accent">{legalPages[s].title}</a>)}
+      </nav>
+    </div>
+  </article>
+</BaseLayout>

@@ -1,0 +1,37 @@
+---
+import SectionHeading from '../ui/SectionHeading.astro';
+import Icon from '../ui/Icon.astro';
+import type { Faq } from '../../lib/schemas/content';
+
+interface Props {
+  faqs: Faq[];
+  title?: string;
+}
+const { faqs, title = 'Questions people ask before working with us' } = Astro.props;
+---
+
+<section class="py-24 lg:py-28" aria-labelledby="faq-title">
+  <div class="container-site grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+    <SectionHeading id="faq-title" eyebrow="FAQ" title={title} intro="Can't find your answer? Ask us directly; we reply within one working day." />
+    <div class="divide-y divide-line border-y border-line">
+      {faqs.map((f) => (
+        <details class="faq group">
+          <summary class="flex items-center justify-between gap-6 py-5 text-left text-lg font-medium">
+            {f.question}
+            <span class="grid size-8 shrink-0 place-items-center rounded-full border border-line transition-transform duration-200 group-open:rotate-45">
+              <Icon name="plus" size={16} />
+            </span>
+          </summary>
+          <p class="max-w-2xl pb-6 pr-12 text-muted">{f.answer}</p>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  summary { list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary:hover { color: var(--accent); }
+  .faq[open] p { animation: rise-in 220ms var(--ease-out-soft); }
+</style>

@@ -1,0 +1,44 @@
+---
+import Breadcrumbs from '../layout/Breadcrumbs.astro';
+
+interface Props {
+  eyebrow?: string;
+  title: string;
+  intro?: string;
+  breadcrumbs?: { name: string; path: string }[];
+}
+const { eyebrow, title, intro, breadcrumbs } = Astro.props;
+---
+
+<section class="page-hero relative isolate overflow-hidden bg-night text-on-night">
+  <svg class="absolute inset-x-0 bottom-0 -z-10 h-24 w-full lg:h-32" viewBox="0 0 1440 300" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="ph-arc" x1="0" x2="1">
+        <stop offset="0" stop-color="#2e5bff" stop-opacity="0" />
+        <stop offset="0.5" stop-color="#7c9bff" stop-opacity="0.8" />
+        <stop offset="1" stop-color="#2e5bff" stop-opacity="0" />
+      </linearGradient>
+    </defs>
+    <path d="M-40 300 C 360 70 1080 70 1480 300" fill="none" stroke="url(#ph-arc)" stroke-width="1.4" />
+  </svg>
+  <div class="container-site flex flex-col gap-6 pb-28 pt-10 lg:pb-36 lg:pt-14">
+    {breadcrumbs && <div class="rise-in"><Breadcrumbs items={breadcrumbs} tone="night" /></div>}
+    <div class="flex max-w-3xl flex-col gap-5">
+      {eyebrow && <p class="eyebrow rise-in text-highlight" style="--rise-index:1">{eyebrow}</p>}
+      <h1 class="rise-in text-4xl font-bold leading-[1.08] sm:text-5xl" style="--rise-index:2">{title}</h1>
+      {intro && <p class="rise-in text-lg text-on-night-muted sm:text-xl" style="--rise-index:3">{intro}</p>}
+      <slot />
+    </div>
+  </div>
+</section>
+
+<style>
+  .page-hero {
+    margin-top: -62px;
+    padding-top: 62px;
+    background-image: radial-gradient(ellipse 60% 70% at 70% 120%, rgb(46 91 255 / 0.35), transparent 70%);
+  }
+  @media (min-width: 1024px) {
+    .page-hero { margin-top: -72px; padding-top: 72px; }
+  }
+</style>

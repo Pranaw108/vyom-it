@@ -1,0 +1,47 @@
+---
+import Button from '../ui/Button.astro';
+
+interface Props {
+  title?: string;
+  body?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+}
+const {
+  title = 'Have a project in mind?',
+  body = 'Tell us what you want to build. We will reply within one working day with questions, ideas and next steps. No obligation.',
+  ctaLabel = 'Get a quote',
+  ctaHref = '/quote',
+} = Astro.props;
+---
+
+<section class="py-20" aria-labelledby="cta-title">
+  <div class="container-site">
+    <div class="cta relative isolate overflow-hidden rounded-3xl bg-night px-7 py-14 text-on-night sm:px-14 sm:py-16" data-reveal>
+      <svg class="absolute inset-x-0 bottom-0 -z-10 h-1/4 w-full" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M-40 300 C 300 60 900 60 1240 300" fill="none" stroke="url(#cta-arc)" stroke-width="1.5" />
+        <defs>
+          <linearGradient id="cta-arc" x1="0" x2="1">
+            <stop offset="0" stop-color="#2e5bff" stop-opacity="0" />
+            <stop offset="0.5" stop-color="#ffb547" />
+            <stop offset="1" stop-color="#2e5bff" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex max-w-2xl flex-col gap-3">
+          <h2 id="cta-title" class="text-3xl font-semibold sm:text-4xl">{title}</h2>
+          <p class="text-lg text-on-night-muted">{body}</p>
+        </div>
+        <Button href={ctaHref} size="lg" arrow class="shrink-0">{ctaLabel}</Button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta {
+    background-image: radial-gradient(ellipse 60% 80% at 50% 120%, rgb(46 91 255 / 0.45), transparent 70%);
+    background-color: var(--night);
+  }
+</style>

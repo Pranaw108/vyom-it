@@ -12,6 +12,9 @@ const MAX_BYTES = 5 * 1024 * 1024;
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const admin = requireAdmin(locals, 'media.upload');
+    // Image storage is optional until R2 is enabled on the account.
+    const media = (env as Partial<Env>).MEDIA;
+    if (!media) return Response.json({ error: 'Image storage is not set up yet. Ask the developer to enable it.' }, { status: 503 });
     const form = await request.formData();
     const file = form.get('file');
     const alt = String(form.get('alt') ?? '').trim();
@@ -22,7 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (alt.length < 3) return Response.json({ error: 'Describe the image for people who cannot see it.' }, { status: 422 });
 
     const key = `uploads/${crypto.randomUUID()}.${ext}`;
-    await env.MEDIA.put(key, file.stream(), { httpMetadata: { contentType: file.type, cacheControl: 'public, max-age=31536000, immutable' } });
+    await media.put(key, file.stream(), { httpMetadata: { contentType: file.type, cacheControl: 'public, max-age=31536000, immutable' } });
     const width = Number(form.get('width')) || null;
     const height = Number(form.get('height')) || null;
     await env.DB.prepare('INSERT INTO media (r2_key, filename, mime, bytes, width, height, alt, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')

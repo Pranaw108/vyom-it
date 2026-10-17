@@ -7,7 +7,9 @@ export const prerender = false;
 export const GET: APIRoute = async ({ params }) => {
   const key = params.key ?? '';
   if (!/^uploads\/[0-9a-f-]{36}\.(jpg|png|webp|avif)$/.test(key)) return new Response('Not found', { status: 404 });
-  const object = await env.MEDIA.get(key);
+  const media = (env as Partial<Env>).MEDIA;
+  if (!media) return new Response('Not found', { status: 404 });
+  const object = await media.get(key);
   if (!object) return new Response('Not found', { status: 404 });
   const headers = new Headers();
   object.writeHttpMetadata(headers);

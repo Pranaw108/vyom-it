@@ -33,8 +33,8 @@
 		{
 			"binding": "DB",
 			"database_name": "vyom-website",
-			// Replaced with the real id when the client's Cloudflare account is set up.
-			"database_id": "00000000-0000-0000-0000-000000000000",
+			// Preview database in the developer's account; replace when moving to the client's account.
+			"database_id": "fb7e6f1d-bf3a-495c-a0b1-8a3f69b9fac0",
 			"migrations_dir": "migrations"
 		}
 	],

@@ -1,0 +1,112 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { LEAD_STATUSES, LeadAdmin, PAGE_SIZE } from '../../../server/admin/leads';
+import { SERVICE_OPTIONS, labelFor } from '../../../lib/leads/validation';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+if (!admin.can('leads.view')) return Astro.redirect('/admin?err=Your%20role%20cannot%20view%20leads.');
+
+const params = Astro.url.searchParams;
+const filter = {
+  status: params.get('status') ?? '',
+  formType: params.get('type') ?? '',
+  q: params.get('q') ?? '',
+  page: Math.max(1, Number(params.get('page')) || 1),
+};
+const leads = new LeadAdmin(env.DB);
+const [{ rows, total }, stats] = await Promise.all([leads.list(filter), leads.stats()]);
+const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+const fmt = (iso: string) => new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
+const statusPill: Record<string, string> = { new: 'pill--info', contacted: 'pill--muted', qualified: 'pill--good', won: 'pill--good', lost: 'pill--muted', spam: 'pill--bad' };
+const query = (patch: Record<string, string | number>) => {
+  const next = new URLSearchParams({ status: filter.status, type: filter.formType, q: filter.q, page: String(filter.page) });
+  for (const [k, v] of Object.entries(patch)) next.set(k, String(v));
+  for (const [k, v] of [...next]) if (!v || (k === 'page' && v === '1')) next.delete(k);
+  return `?${next}`;
+};
+const exportQuery = new URLSearchParams({ status: filter.status, type: filter.formType, q: filter.q });
+---
+
+<AdminLayout title="Leads" intro={`${total} enquir${total === 1 ? 'y' : 'ies'}${filter.status || filter.formType || filter.q ? ' match these filters' : ' in total'}.`}>
+  {admin.can('leads.export') && (
+    <a slot="actions" href={`/api/admin/leads-export?${exportQuery}`} class="admin-btn">Export CSV</a>
+  )}
+
+  {stats.gaveUp > 0 && (
+    <p class="admin-flash admin-flash--error" role="alert">
+      {stats.gaveUp} lead alert{stats.gaveUp === 1 ? '' : 's'} could not be emailed after 5 attempts. These people have not heard from you; reply to them directly.
+    </p>
+  )}
+
+  <form method="get" class="admin-card mb-5 grid gap-4 md:grid-cols-[1fr_180px_180px_auto] md:items-end" role="search">
+    <div>
+      <label for="q" class="admin-label">Search</label>
+      <input id="q" name="q" class="admin-input" value={filter.q} placeholder="Name, email or company" />
+    </div>
+    <div>
+      <label for="status" class="admin-label">Status</label>
+      <select id="status" name="status" class="admin-input">
+        <option value="">All statuses</option>
+        {LEAD_STATUSES.map((s) => <option value={s} selected={filter.status === s}>{s}</option>)}
+      </select>
+    </div>
+    <div>
+      <label for="type" class="admin-label">Form</label>
+      <select id="type" name="type" class="admin-input">
+        <option value="">Both forms</option>
+        <option value="quote" selected={filter.formType === 'quote'}>Quote requests</option>
+        <option value="contact" selected={filter.formType === 'contact'}>Messages</option>
+      </select>
+    </div>
+    <div class="flex gap-2">
+      <button class="admin-btn admin-btn--primary" type="submit">Filter</button>
+      {(filter.q || filter.status || filter.formType) && <a href="/admin/leads" class="admin-btn">Clear</a>}
+    </div>
+  </form>
+
+  {rows.length === 0 ? (
+    <p class="admin-card text-muted">{total === 0 && !filter.q && !filter.status && !filter.formType ? 'No enquiries yet.' : 'No leads match these filters.'}</p>
+  ) : (
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <caption class="sr-only">Leads</caption>
+        <thead>
+          <tr><th>Reference</th><th>Contact</th><th>Interested in</th><th>Status</th><th>Alert email</th><th>Received</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((l) => (
+            <tr>
+              <td><a href={`/admin/leads/${l.id}`} class="font-mono text-sm font-medium text-accent">{l.reference}</a></td>
+              <td>
+                <span class="font-medium">{l.name}</span>
+                {!l.erased && <span class="block text-xs text-muted">{l.email}{l.company ? ` · ${l.company}` : ''}</span>}
+              </td>
+              <td class="text-sm">
+                {l.intent === 'audit' ? 'Website audit' : l.services.map((s) => labelFor(SERVICE_OPTIONS, s)).join(', ') || 'General message'}
+              </td>
+              <td><span class:list={['pill', statusPill[l.status]]}>{l.status}</span></td>
+              <td>
+                {l.notifyStatus === 'sent' && <span class="pill pill--good">sent</span>}
+                {(l.notifyStatus === 'pending' || l.notifyStatus === 'sending') && <span class="pill pill--muted">sending</span>}
+                {l.notifyStatus === 'failed' && <span class="pill pill--warn">retrying</span>}
+                {l.notifyStatus === 'gave_up' && <span class="pill pill--bad">not delivered</span>}
+              </td>
+              <td class="whitespace-nowrap text-sm text-muted">{fmt(l.createdAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+
+  {pages > 1 && (
+    <nav aria-label="Pages" class="mt-5 flex items-center justify-between text-sm">
+      {filter.page > 1 ? <a class="admin-btn" href={query({ page: filter.page - 1 })}>← Newer</a> : <span></span>}
+      <span class="text-muted">Page {filter.page} of {pages}</span>
+      {filter.page < pages ? <a class="admin-btn" href={query({ page: filter.page + 1 })}>Older →</a> : <span></span>}
+    </nav>
+  )}
+</AdminLayout>

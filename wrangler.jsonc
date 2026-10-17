@@ -12,7 +12,8 @@
 	"observability": {
 		"enabled": true
 	},
-	// Non-secret settings. Secrets (TURNSTILE_SECRET, RESEND_API_KEY, IP_HASH_SALT) are set with
+	// Non-secret settings. Secrets (TURNSTILE_SECRET, RESEND_API_KEY, IP_HASH_SALT, CSRF_SECRET,
+	// INITIAL_OWNER_EMAIL, DEPLOY_HOOK_URL) are set with
 	// `wrangler secret put` in production and in .dev.vars locally. See docs/ENVIRONMENT.md.
 	"vars": {
 		"SITE_URL": "http://localhost:4321",
@@ -20,8 +21,14 @@
 		"LEAD_NOTIFY_TO": "",
 		"LEAD_ACK_ENABLED": "false",
 		"LEAD_REPLY_TIME": "within 1 working day",
-		"MAIL_FROM": ""
+		"MAIL_FROM": "",
+		// Cloudflare Access application protecting /admin (set when the client account exists).
+		"ACCESS_TEAM_DOMAIN": "",
+		"ACCESS_AUD": ""
 	},
+	"r2_buckets": [
+		{ "binding": "MEDIA", "bucket_name": "vyom-website-media" }
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",

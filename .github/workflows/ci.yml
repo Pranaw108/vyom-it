@@ -36,8 +36,9 @@ jobs:
       # Must exist before the build: the build copies .dev.vars into the preview output.
       - name: Local test secrets and database
         run: |
-          printf 'TURNSTILE_SECRET=1x0000000000000000000000000000000AA\nIP_HASH_SALT=ci-salt\nRESEND_API_KEY=\n' > .dev.vars
+          printf 'TURNSTILE_SECRET=1x0000000000000000000000000000000AA\nIP_HASH_SALT=ci-salt\nRESEND_API_KEY=\nCSRF_SECRET=ci-csrf-secret\nDEV_ADMIN_EMAIL=owner@localhost.test\nINITIAL_OWNER_EMAIL=owner@localhost.test\nDEPLOY_HOOK_URL=\n' > .dev.vars
           npx wrangler d1 migrations apply vyom-website --local
+          npm run seed:local
 
       - name: Build
         run: npm run build

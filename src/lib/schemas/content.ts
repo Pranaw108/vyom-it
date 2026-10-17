@@ -1,14 +1,12 @@
 import { z } from 'astro/zod';
+import { ICON_NAMES } from '../icons';
 
 // One schema per content type. The admin panel and the build use the same definitions.
 
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens');
 const httpsUrl = z.url().startsWith('https://');
 
-export const iconName = z.enum([
-  'code', 'smartphone', 'pen', 'trending', 'layers', 'shield', 'clock', 'lock', 'users',
-  'compass', 'checks', 'flag', 'message', 'mail', 'phone', 'map-pin', 'sparkles',
-]);
+export const iconName = z.enum(ICON_NAMES);
 export type IconName = z.infer<typeof iconName>;
 
 export const faqSchema = z.object({
@@ -55,10 +53,10 @@ export const serviceSchema = z.object({
 });
 
 export const engagementModelSchema = z.object({
-  name: z.string(),
-  bestFor: z.string(),
-  description: z.string(),
-  points: z.array(z.string()),
+  name: z.string().min(2),
+  bestFor: z.string().min(3),
+  description: z.string().min(10),
+  points: z.array(z.string().min(2)).min(1),
 });
 
 const titledPoint = z.object({ title: z.string(), body: z.string() });

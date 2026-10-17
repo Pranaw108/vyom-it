@@ -1,0 +1,82 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { UserStore } from '../../server/admin/users';
+import { ROLES, ROLE_LABELS } from '../../server/admin/permissions';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+if (!admin.can('users.manage')) return Astro.redirect('/admin?err=Only%20Owners%20can%20manage%20users.');
+const users = await new UserStore(env.DB).list();
+const fmt = (iso: string | null) => (iso ? new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }).format(new Date(iso)) : 'Never');
+const roleHelp: Record<string, string> = {
+  owner: 'Everything, including users, leads export and erasing data.',
+  content_manager: 'Edit and publish content and team profiles.',
+  contributor: 'Edit content and submit it for review.',
+  sales: 'View and update leads.',
+  viewer: 'Read-only access to content.',
+};
+---
+
+<AdminLayout title="Users" intro="Who can sign in to the admin, and what they can do.">
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div class="admin-table-wrap min-w-0">
+      <table class="admin-table">
+        <caption class="sr-only">Admin users</caption>
+        <thead><tr><th>Person</th><th>Role</th><th>Status</th><th>Last seen</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          {users.map((u) => (
+            <tr>
+              <td><span class="font-medium">{u.name}</span>{u.id === admin.user.id && <span class="text-xs text-muted"> (you)</span>}<span class="block text-xs text-muted">{u.email}</span></td>
+              <td>
+                <form method="post" action="/api/admin/users" class="flex items-center gap-2">
+                  <input type="hidden" name="_csrf" value={admin.csrf} />
+                  <input type="hidden" name="action" value="role" />
+                  <input type="hidden" name="id" value={u.id} />
+                  <label class="sr-only" for={`role-${u.id}`}>Role for {u.name}</label>
+                  <select id={`role-${u.id}`} name="role" class="admin-input w-auto">
+                    {ROLES.map((r) => <option value={r} selected={u.role === r}>{ROLE_LABELS[r]}</option>)}
+                  </select>
+                  <button class="admin-btn" type="submit">Save</button>
+                </form>
+              </td>
+              <td><span class:list={['pill', u.status === 'active' ? 'pill--good' : 'pill--muted']}>{u.status}</span></td>
+              <td class="text-sm text-muted">{fmt(u.lastSeenAt)}</td>
+              <td>
+                <form method="post" action="/api/admin/users">
+                  <input type="hidden" name="_csrf" value={admin.csrf} />
+                  <input type="hidden" name="action" value={u.status === 'active' ? 'disable' : 'enable'} />
+                  <input type="hidden" name="id" value={u.id} />
+                  <button class:list={['admin-btn', u.status === 'active' && 'admin-btn--danger']} type="submit">{u.status === 'active' ? 'Disable' : 'Enable'}</button>
+                </form>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <aside class="flex flex-col gap-6">
+      <form method="post" action="/api/admin/users" class="admin-card flex flex-col gap-3">
+        <h2 class="text-lg font-semibold">Add a person</h2>
+        <input type="hidden" name="_csrf" value={admin.csrf} />
+        <input type="hidden" name="action" value="invite" />
+        <div><label for="invite-name" class="admin-label">Name</label><input id="invite-name" name="name" required class="admin-input" autocomplete="off" /></div>
+        <div><label for="invite-email" class="admin-label">Work email</label><input id="invite-email" name="email" type="email" required class="admin-input" autocomplete="off" /></div>
+        <div>
+          <label for="invite-role" class="admin-label">Role</label>
+          <select id="invite-role" name="role" class="admin-input">{ROLES.map((r) => <option value={r} selected={r === 'contributor'}>{ROLE_LABELS[r]}</option>)}</select>
+        </div>
+        <button class="admin-btn admin-btn--primary" type="submit">Add person</button>
+        <p class="text-xs text-muted">They also need to be allowed in the Cloudflare Access policy before they can sign in.</p>
+      </form>
+      <div class="admin-card">
+        <h2 class="mb-3 text-lg font-semibold">What each role can do</h2>
+        <dl class="flex flex-col gap-2 text-sm">
+          {ROLES.map((r) => <div><dt class="font-semibold">{ROLE_LABELS[r]}</dt><dd class="text-muted">{roleHelp[r]}</dd></div>)}
+        </dl>
+      </div>
+    </aside>
+  </div>
+</AdminLayout>

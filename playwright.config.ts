@@ -14,7 +14,8 @@ export default defineConfig({
   },
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
+    // Admin flows create users, so they run once (desktop) to stay independent.
+    { name: 'mobile-chromium', use: { ...devices['Pixel 7'] }, testIgnore: /admin\.spec\.ts/ },
   ],
   webServer: {
     command: 'npx astro preview --port 4321 --host 127.0.0.1',

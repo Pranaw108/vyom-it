@@ -1,0 +1,129 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { LEAD_STATUSES, LeadAdmin } from '../../../server/admin/leads';
+import { BUDGETS, CONTACT_METHODS, PLATFORMS, PROJECT_TYPES, SERVICE_OPTIONS, TIMELINES, labelFor } from '../../../lib/leads/validation';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+if (!admin.can('leads.view')) return Astro.redirect('/admin?err=Your%20role%20cannot%20view%20leads.');
+const id = Number(Astro.params.id);
+const detail = Number.isInteger(id) ? await new LeadAdmin(env.DB).detail(id) : null;
+if (!detail) return Astro.redirect('/admin/leads?err=That%20lead%20could%20not%20be%20found.');
+
+const { row, raw, events, notes } = detail;
+const fmt = (iso: string) => new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
+const s = (key: string) => (raw[key] as string | null) ?? null;
+const facts: [string, string | null][] = [
+  ['Email', row.erased ? null : row.email],
+  ['Phone', row.phone],
+  ['Company', row.company],
+  ['Country', s('country')],
+  ['Prefers', labelFor(CONTACT_METHODS, s('preferred_contact'))],
+  ['Services', row.services.map((v) => labelFor(SERVICE_OPTIONS, v)).join(', ') || null],
+  ['Project type', s('project_type') ? labelFor(PROJECT_TYPES, s('project_type')) : null],
+  ['Platforms', s('platforms') ? labelFor(PLATFORMS, s('platforms')) : null],
+  ['Timeline', s('timeline') ? labelFor(TIMELINES, s('timeline')) : null],
+  ['Budget', s('budget') ? labelFor(BUDGETS, s('budget')) : null],
+  ['Link', s('link')],
+  ['Source', [s('utm_source'), s('utm_campaign'), s('referrer')].filter(Boolean).join(' · ') || null],
+  ['Landing page', s('landing_page')],
+  ['Marketing emails', raw.consent_marketing === 1 ? 'Agreed' : 'Not agreed'],
+];
+const self = `/admin/leads/${id}`;
+---
+
+<AdminLayout title={row.erased ? `${row.reference} (erased)` : row.name} intro={`${row.reference} · ${row.intent === 'audit' ? 'Website audit request' : row.formType === 'quote' ? 'Quote request' : 'Message'} · ${fmt(row.createdAt)}`}>
+  <a slot="actions" href="/admin/leads" class="admin-btn">← All leads</a>
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div class="flex min-w-0 flex-col gap-6">
+      <section class="admin-card" aria-labelledby="msg-title">
+        <h2 id="msg-title" class="mb-3 text-lg font-semibold">Message</h2>
+        <p class="whitespace-pre-wrap leading-relaxed">{s('message')}</p>
+      </section>
+
+      <section class="admin-card" aria-labelledby="facts-title">
+        <h2 id="facts-title" class="mb-3 text-lg font-semibold">Details</h2>
+        <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          {facts.filter(([, v]) => v).map(([k, v]) => (
+            <div class="min-w-0">
+              <dt class="text-xs text-muted">{k}</dt>
+              <dd class="break-words font-medium">{k === 'Link' ? <a href={v!} target="_blank" rel="noopener noreferrer nofollow" class="text-accent underline">{v}</a> : v}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section class="admin-card" aria-labelledby="notes-title">
+        <h2 id="notes-title" class="mb-3 text-lg font-semibold">Internal notes</h2>
+        {admin.can('leads.update') && !row.erased && (
+          <form method="post" action="/api/admin/leads" class="mb-4 flex flex-col gap-2">
+            <input type="hidden" name="_csrf" value={admin.csrf} />
+            <input type="hidden" name="action" value="note" />
+            <input type="hidden" name="id" value={id} />
+            <input type="hidden" name="return" value={self} />
+            <label for="note-body" class="admin-label">Add a note (only your team sees this)</label>
+            <textarea id="note-body" name="body" rows="3" maxlength="2000" required class="admin-input"></textarea>
+            <button class="admin-btn self-start" type="submit">Add note</button>
+          </form>
+        )}
+        {notes.length === 0 ? <p class="text-sm text-muted">No notes yet.</p> : (
+          <ul class="flex flex-col gap-3">
+            {notes.map((n) => (
+              <li class="rounded-lg bg-surface p-3">
+                <p class="whitespace-pre-wrap">{n.body}</p>
+                <p class="mt-1 text-xs text-muted">{n.author_email} · {fmt(n.created_at!)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+
+    <aside class="flex flex-col gap-6">
+      {admin.can('leads.update') && !row.erased && (
+        <form method="post" action="/api/admin/leads" class="admin-card flex flex-col gap-3">
+          <input type="hidden" name="_csrf" value={admin.csrf} />
+          <input type="hidden" name="action" value="status" />
+          <input type="hidden" name="id" value={id} />
+          <input type="hidden" name="return" value={self} />
+          <label for="lead-status" class="admin-label">Status</label>
+          <select id="lead-status" name="status" class="admin-input">
+            {LEAD_STATUSES.map((st) => <option value={st} selected={row.status === st}>{st}</option>)}
+          </select>
+          <button class="admin-btn admin-btn--primary" type="submit">Update status</button>
+        </form>
+      )}
+
+      <section class="admin-card" aria-labelledby="history-title">
+        <h2 id="history-title" class="mb-3 text-lg font-semibold">History</h2>
+        <ol class="flex flex-col gap-2 text-sm">
+          {events.map((e) => (
+            <li class="flex flex-col border-l-2 border-line pl-3">
+              <span class="font-medium">{e.event.replaceAll('_', ' ')}{e.detail ? `: ${e.detail}` : ''}</span>
+              <span class="text-xs text-muted">{e.actor} · {fmt(e.created_at!)}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {admin.can('leads.erase') && !row.erased && (
+        <details class="admin-card">
+          <summary class="font-semibold text-danger">Erase personal data</summary>
+          <form method="post" action="/api/admin/leads" class="mt-3 flex flex-col gap-3 text-sm">
+            <p class="text-muted">For privacy requests only. Name, contact details and message are removed permanently. A record that the request was handled is kept.</p>
+            <input type="hidden" name="_csrf" value={admin.csrf} />
+            <input type="hidden" name="action" value="erase" />
+            <input type="hidden" name="id" value={id} />
+            <input type="hidden" name="return" value={self} />
+            <div><label for="erase-reason" class="admin-label">Reason</label><input id="erase-reason" name="reason" required minlength="5" class="admin-input" placeholder="Deletion request by email, 3 Nov" /></div>
+            <div><label for="erase-confirm" class="admin-label">Type ERASE to confirm</label><input id="erase-confirm" name="confirm" required class="admin-input" autocomplete="off" /></div>
+            <button class="admin-btn admin-btn--danger" type="submit">Erase permanently</button>
+          </form>
+        </details>
+      )}
+    </aside>
+  </div>
+</AdminLayout>

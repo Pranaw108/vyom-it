@@ -2,6 +2,10 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Quote form', () => {
   test('pre-selects the service, validates each step and submits (TC-001, TC-002)', async ({ page }) => {
+    // A fresh address per run, so repeated local runs don't trip the 5-per-10-minutes limit.
+    // (On Cloudflare this header is always set by the edge, never by the visitor.)
+    const ip = `198.18.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+    await page.route('**/api/leads', (route) => route.continue({ headers: { ...route.request().headers(), 'cf-connecting-ip': ip } }));
     await page.goto('/quote?service=mobile-app-development');
     await expect(page.getByRole('checkbox', { name: 'Mobile app development' })).toBeChecked();
 

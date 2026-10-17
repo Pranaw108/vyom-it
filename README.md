@@ -1,6 +1,6 @@
 # Vyom IT website
 
-Marketing website and lead system for Vyom IT (provisional brand name). Static pages on Cloudflare, a small Worker backend for the contact and quote forms, and (in progress) a role-based admin panel.
+Marketing website and lead system for Vyom IT (provisional brand name). Static pages on Cloudflare, a small Worker backend for the contact and quote forms, and a role-based admin panel.
 
 Scope, requirements (FR/NFR IDs) and test cases are defined in the SOW.
 
@@ -11,7 +11,7 @@ Scope, requirements (FR/NFR IDs) and test cases are defined in the SOW.
 | Framework | Astro 7, TypeScript (strict), Preact islands for forms |
 | Styling | Tailwind CSS v4 with design tokens in `src/styles/global.css` |
 | Hosting | Cloudflare Workers with static assets (`@astrojs/cloudflare`) |
-| Data | Cloudflare D1 (leads), R2 (media, planned) |
+| Data | Cloudflare D1 (leads, content, users, audit log), R2 (images) |
 | Email | Resend (falls back to console logging when no key is set) |
 | Spam protection | Cloudflare Turnstile, honeypot, 5-per-10-minute rate limit |
 | Tests | Vitest (unit), Playwright + axe-core (browser and accessibility) |
@@ -54,6 +54,36 @@ RESEND_API_KEY=
 
 With no `RESEND_API_KEY`, emails are logged instead of sent.
 
+## Admin panel
+
+`/admin` is protected by Cloudflare Access in production. The app also verifies the Access token on every request, checks the user's role, and requires a CSRF token for every change.
+
+Locally, add to `.dev.vars`:
+
+```text
+CSRF_SECRET=any-local-value
+DEV_ADMIN_EMAIL=owner@localhost.test
+INITIAL_OWNER_EMAIL=owner@localhost.test
+```
+
+`DEV_ADMIN_EMAIL` signs you in automatically, and only on `localhost` / `127.0.0.1`. The first visit by `INITIAL_OWNER_EMAIL` creates the first Owner.
+
+Content edited in the admin is stored in D1. The public site is static: publishing triggers a rebuild (`DEPLOY_HOOK_URL`), and the build reads only published content:
+
+```bash
+npm run db:migrate:local
+npm run seed:local                 # copy src/data seed content into D1 (never overwrites)
+CONTENT_SOURCE=local npm run build # build from published D1 content instead of the seed files
+```
+
+| Role | Can do |
+|---|---|
+| Owner | Everything, including users, lead export, erasing data, audit log |
+| Content manager | Edit and publish content and team profiles |
+| Contributor | Edit content and submit it for review |
+| Sales | View and update leads |
+| Viewer | Read content |
+
 ## Checks
 
 ```bash
@@ -69,7 +99,9 @@ npm run test:api     # API checks; needs `npx astro preview` running
 | Name | Where | Purpose |
 |---|---|---|
 | `SITE_URL`, `COMPANY_NAME`, `LEAD_NOTIFY_TO`, `LEAD_ACK_ENABLED`, `LEAD_REPLY_TIME`, `MAIL_FROM` | `wrangler.jsonc` vars | Non-secret runtime settings |
-| `TURNSTILE_SECRET`, `IP_HASH_SALT`, `RESEND_API_KEY` | `wrangler secret put` / `.dev.vars` | Secrets, never committed |
+| `TURNSTILE_SECRET`, `IP_HASH_SALT`, `RESEND_API_KEY`, `CSRF_SECRET`, `INITIAL_OWNER_EMAIL`, `DEPLOY_HOOK_URL` | `wrangler secret put` / `.dev.vars` | Secrets, never committed |
+| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | `wrangler.jsonc` vars | Cloudflare Access application for `/admin` |
+| `CONTENT_SOURCE` | build environment | `remote` in production so the build reads published D1 content |
 | `PUBLIC_TURNSTILE_SITE_KEY`, `PUBLIC_INDEXING` | build environment / `.env` | Public build settings; `PUBLIC_INDEXING=false` blocks search indexing on previews |
 | `SITE_URL` | build environment | Canonical URLs and sitemap |
 

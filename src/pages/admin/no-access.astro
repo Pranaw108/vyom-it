@@ -1,0 +1,36 @@
+---
+import '../../styles/global.css';
+
+export const prerender = false;
+
+const denied = Astro.locals.adminDenied;
+const reason = denied?.reason ?? 'signed-out';
+const messages = {
+  'signed-out': { title: 'Please sign in', body: 'This area is for the website team. Sign in with your work account to continue.' },
+  'no-access': { title: "You don't have access yet", body: 'You are signed in, but your account has not been added to the admin. Ask an Owner to add you.' },
+  disabled: { title: 'Your access has been turned off', body: 'An Owner has disabled your admin account. Contact them if you think this is a mistake.' },
+} as const;
+const { title, body } = messages[reason];
+Astro.response.status = reason === 'signed-out' ? 401 : 403;
+---
+
+<!doctype html>
+<html lang="en-IN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title}</title>
+  </head>
+  <body class="grid min-h-dvh place-items-center bg-surface px-5">
+    <main class="flex max-w-md flex-col gap-4 rounded-2xl border border-line bg-canvas p-8">
+      <h1 class="text-2xl font-semibold">{title}</h1>
+      <p class="text-muted">{body}</p>
+      {denied?.email && <p class="text-sm text-muted">Signed in as <span class="font-medium text-ink">{denied.email}</span></p>}
+      <div class="flex flex-wrap gap-3 pt-2">
+        <a href="/" class="font-medium text-accent underline underline-offset-4">Go to the website</a>
+        {denied?.email && <a href="/cdn-cgi/access/logout" class="font-medium text-muted underline underline-offset-4">Sign out</a>}
+      </div>
+    </main>
+  </body>
+</html>

@@ -15,7 +15,10 @@
     "screenshots": "node scripts/screenshots.mjs",
     "test": "vitest run",
     "test:api": "node scripts/api-smoke.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "prebuild": "node scripts/pull-content.mjs",
+    "seed:local": "node scripts/seed-content.mjs --local",
+    "db:migrate:local": "wrangler d1 migrations apply vyom-website --local"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.4.0",

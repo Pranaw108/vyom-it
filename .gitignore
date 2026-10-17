@@ -30,3 +30,6 @@ pnpm-debug.log*
 screenshots/
 test-results/
 playwright-report/
+
+# content pulled from D1 at build time
+src/data/generated/

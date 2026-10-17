@@ -1,0 +1,160 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { LeadAdmin } from '../../server/admin/leads';
+import { ContentStore } from '../../server/content/store';
+import { latestPublishJob } from '../../server/content/publish';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+const canLeads = admin.can('leads.view');
+const canContent = admin.can('content.view');
+
+const [leadStats, contentCounts, lastPublish, buildInfo, recent] = await Promise.all([
+  new LeadAdmin(env.DB).stats(),
+  canContent ? new ContentStore(env.DB).counts() : Promise.resolve(null),
+  latestPublishJob(env.DB),
+  env.ASSETS.fetch(new URL('/build-info.json', Astro.url))
+    .then((r) => (r.ok ? (r.json() as Promise<{ builtAt: string }>) : null))
+    .catch(() => null),
+  canLeads ? new LeadAdmin(env.DB).list({ page: 1 }) : Promise.resolve(null),
+]);
+
+const fmt = (iso: string | null | undefined) =>
+  iso ? new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso)) : '—';
+
+// Health is judged from the system's own records, never assumed (FR-149).
+type Tone = 'good' | 'warn' | 'bad' | 'muted';
+const health: { label: string; value: string; tone: Tone; detail: string }[] = [];
+
+if (leadStats.gaveUp > 0) {
+  health.push({ label: 'Lead emails', value: `${leadStats.gaveUp} not delivered`, tone: 'bad', detail: 'Alerts for these leads failed 5 times. Open Leads and contact them directly.' });
+} else if (leadStats.failing > 0) {
+  health.push({ label: 'Lead emails', value: `${leadStats.failing} retrying`, tone: 'warn', detail: 'Retried automatically every 15 minutes.' });
+} else {
+  health.push({ label: 'Lead emails', value: 'Delivering', tone: 'good', detail: 'No failed lead alerts.' });
+}
+
+const builtAt = buildInfo?.builtAt ?? null;
+if (!lastPublish) {
+  health.push({ label: 'Live website', value: 'Up to date', tone: 'good', detail: `Built ${fmt(builtAt)}` });
+} else if (lastPublish.hookStatus === 'failed') {
+  health.push({ label: 'Live website', value: 'Rebuild failed to start', tone: 'bad', detail: lastPublish.detail ?? 'Check the Cloudflare dashboard.' });
+} else if (lastPublish.hookStatus === 'not_configured') {
+  health.push({ label: 'Live website', value: 'Manual rebuild needed', tone: 'warn', detail: 'Automatic rebuilds are not set up in this environment.' });
+} else if (builtAt && builtAt >= lastPublish.requestedAt) {
+  health.push({ label: 'Live website', value: 'Up to date', tone: 'good', detail: `Built ${fmt(builtAt)}` });
+} else {
+  const minutes = Math.round((Date.now() - Date.parse(lastPublish.requestedAt)) / 60_000);
+  health.push(
+    minutes > 15
+      ? { label: 'Live website', value: 'Rebuild overdue', tone: 'bad', detail: `Requested ${minutes} minutes ago. Check the build in Cloudflare.` }
+      : { label: 'Live website', value: 'Updating', tone: 'warn', detail: `Rebuild requested ${fmt(lastPublish.requestedAt)}` },
+  );
+}
+health.push({ label: 'Backups', value: 'Point-in-time recovery', tone: 'muted', detail: 'Cloudflare keeps 7 days of database history. Weekly exports arrive with Phase 2.' });
+
+const statusPill: Record<string, string> = { new: 'pill--info', contacted: 'pill--muted', qualified: 'pill--good', won: 'pill--good', lost: 'pill--muted', spam: 'pill--bad' };
+---
+
+<AdminLayout title={`Welcome, ${admin.user.name.split(' ')[0]}`} intro="What needs attention today.">
+  <section aria-label="System health" class="mb-8 grid gap-4 md:grid-cols-3">
+    {health.map((h) => (
+      <div class:list={['admin-card health', `health--${h.tone}`]}>
+        <p class="eyebrow text-muted">{h.label}</p>
+        <p class="mt-2 flex items-center gap-2 text-lg font-semibold"><span class:list={['pill', `pill--${h.tone}`]}>{h.value}</span></p>
+        <p class="mt-2 text-sm text-muted">{h.detail}</p>
+      </div>
+    ))}
+  </section>
+
+  <section aria-label="Summary" class="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {canLeads && (
+      <>
+        <a href="/admin/leads?status=new" class="admin-card kpi">
+          <span class="eyebrow text-muted">Waiting for a reply</span>
+          <span class="kpi-number" data-count={leadStats.unanswered}>{leadStats.unanswered}</span>
+          <span class="text-sm text-muted">New leads not yet contacted</span>
+        </a>
+        <a href="/admin/leads" class="admin-card kpi">
+          <span class="eyebrow text-muted">Last 7 days</span>
+          <span class="kpi-number" data-count={leadStats.last7}>{leadStats.last7}</span>
+          <span class="text-sm text-muted">Enquiries received</span>
+        </a>
+      </>
+    )}
+    {contentCounts && (
+      <>
+        <a href="/admin/content" class="admin-card kpi">
+          <span class="eyebrow text-muted">Awaiting review</span>
+          <span class="kpi-number" data-count={contentCounts.inReview}>{contentCounts.inReview}</span>
+          <span class="text-sm text-muted">Content submitted for publishing</span>
+        </a>
+        <a href="/admin/content" class="admin-card kpi">
+          <span class="eyebrow text-muted">Unpublished changes</span>
+          <span class="kpi-number" data-count={contentCounts.changed}>{contentCounts.changed}</span>
+          <span class="text-sm text-muted">Drafts not yet live</span>
+        </a>
+      </>
+    )}
+  </section>
+
+  {recent && (
+    <section aria-labelledby="recent-title" class="flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <h2 id="recent-title" class="text-xl font-semibold">Latest enquiries</h2>
+        <a href="/admin/leads" class="text-sm font-medium text-accent">All leads →</a>
+      </div>
+      {recent.rows.length === 0 ? (
+        <p class="admin-card text-muted">No enquiries yet. They will appear here as soon as someone uses the contact or quote form.</p>
+      ) : (
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <caption class="sr-only">Latest enquiries</caption>
+            <thead><tr><th>Reference</th><th>Name</th><th>Type</th><th>Status</th><th>Received</th></tr></thead>
+            <tbody>
+              {recent.rows.slice(0, 6).map((l) => (
+                <tr>
+                  <td><a href={`/admin/leads/${l.id}`} class="font-mono text-sm font-medium text-accent">{l.reference}</a></td>
+                  <td>{l.name}{l.company && <span class="block text-xs text-muted">{l.company}</span>}</td>
+                  <td>{l.intent === 'audit' ? 'Audit request' : l.formType === 'quote' ? 'Quote' : 'Message'}</td>
+                  <td><span class:list={['pill', statusPill[l.status]]}>{l.status}</span></td>
+                  <td class="whitespace-nowrap text-sm text-muted">{fmt(l.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  )}
+</AdminLayout>
+
+<style>
+  .health { border-top-width: 3px; }
+  .health--good { border-top-color: var(--success); }
+  .health--warn { border-top-color: var(--warning); }
+  .health--bad { border-top-color: var(--danger); }
+  .health--muted { border-top-color: var(--line-strong); }
+  .kpi { display: flex; flex-direction: column; gap: 0.35rem; transition: border-color 150ms, box-shadow 150ms; }
+  .kpi:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); box-shadow: var(--shadow-card); }
+  .kpi-number { font-family: var(--font-display); font-size: 2.4rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+</style>
+
+<script>
+  // Count headline numbers up on load (skipped when reduced motion is preferred).
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll<HTMLElement>('[data-count]').forEach((el) => {
+      const target = Number(el.dataset.count);
+      if (!target) return;
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / 700);
+        el.textContent = String(Math.round(target * (1 - Math.pow(1 - t, 3))));
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+</script>

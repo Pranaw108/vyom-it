@@ -1,0 +1,48 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import ContentEditor from '../../../../components/admin/ContentEditor';
+import { getCollection } from '../../../../lib/content/collections';
+import { blank, forEditor } from '../../../../lib/content/fields';
+import { describeState } from '../../../../lib/content/status';
+import { ContentStore } from '../../../../server/content/store';
+import { validationIssues } from '../../../../server/content/service';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+const def = getCollection(Astro.params.collection ?? '');
+if (!def || !admin.can('content.view')) return Astro.redirect('/admin/content?err=That%20content%20type%20is%20not%20available.');
+
+const key = Astro.params.key ?? 'new';
+const isNew = key === 'new';
+const entry = isNew ? null : await new ContentStore(env.DB).get(def.name, key);
+if (!isNew && !entry) return Astro.redirect(`/admin/content/${def.name}?err=That%20item%20could%20not%20be%20found.`);
+if (isNew && (def.kind === 'single' || !admin.can('content.edit') || !admin.can(def.editPermission))) {
+  return Astro.redirect(`/admin/content/${def.name}?err=You%20cannot%20add%20items%20here.`);
+}
+
+const initial = forEditor(def.fields, entry?.draft ?? blank(def.fields));
+const state = entry ? describeState(entry) : { label: 'New, not saved', tone: 'muted' as const };
+const title = entry ? def.titleOf(entry.draft) : `New ${def.label.toLowerCase().replace(/s$/, '')}`;
+const backHref = def.kind === 'single' ? '/admin/content' : `/admin/content/${def.name}`;
+---
+
+<AdminLayout title={title} intro={def.label}>
+  <a slot="actions" href={backHref} class="admin-btn">← Back</a>
+  <ContentEditor
+    client:load
+    collection={def.name}
+    entryKey={isNew ? null : key}
+    initialData={initial}
+    rowVersion={entry?.rowVersion ?? 0}
+    initialState={state}
+    initialIssues={entry ? validationIssues(def, entry.draft) : []}
+    canEdit={admin.can('content.edit') && admin.can(def.editPermission)}
+    canSubmit={admin.can('content.submit')}
+    canPublish={admin.can('content.publish') && admin.can(def.editPermission)}
+    canUnpublish={def.kind === 'list'}
+    isLive={Boolean(entry?.published)}
+    csrf={admin.csrf}
+  />
+</AdminLayout>

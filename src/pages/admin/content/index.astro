@@ -1,0 +1,47 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { COLLECTIONS } from '../../../lib/content/collections';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+if (!admin.can('content.view')) return Astro.redirect('/admin?err=Your%20role%20cannot%20view%20content.');
+
+const { results } = await env.DB.prepare(
+  `SELECT collection, COUNT(*) AS items, SUM(review_status = 'in_review') AS in_review,
+          SUM(review_status = 'draft' OR published_data IS NULL) AS pending
+   FROM content_entries GROUP BY collection`,
+).all<{ collection: string; items: number; in_review: number; pending: number }>();
+const counts = new Map(results.map((r) => [r.collection, r]));
+---
+
+<AdminLayout title="Content" intro="Edit the website. Changes stay as drafts until someone with publishing rights publishes them.">
+  <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    {COLLECTIONS.map((c) => {
+      const n = counts.get(c.name);
+      const href = c.kind === 'single' ? `/admin/content/${c.name}/main` : `/admin/content/${c.name}`;
+      return (
+        <li>
+          <a href={href} class="admin-card collection flex h-full flex-col gap-2">
+            <span class="flex items-center justify-between gap-3">
+              <span class="text-lg font-semibold">{c.label}</span>
+              {c.kind === 'list' && <span class="font-mono text-sm text-muted">{n?.items ?? 0}</span>}
+            </span>
+            <span class="text-sm text-muted">{c.description}</span>
+            <span class="mt-auto flex flex-wrap gap-2 pt-2">
+              {(n?.in_review ?? 0) > 0 && <span class="pill pill--info">{n!.in_review} in review</span>}
+              {(n?.pending ?? 0) > 0 && <span class="pill pill--warn">{n!.pending} not live</span>}
+              {!n && <span class="pill pill--muted">Not set up</span>}
+            </span>
+          </a>
+        </li>
+      );
+    })}
+  </ul>
+</AdminLayout>
+
+<style>
+  .collection { transition: border-color 150ms, box-shadow 150ms; }
+  .collection:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); box-shadow: var(--shadow-card); }
+</style>

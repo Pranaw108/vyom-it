@@ -1,0 +1,64 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { AUDIT_RETENTION_MONTHS, AuditLog } from '../../server/admin/audit';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+if (!admin.can('audit.view')) return Astro.redirect('/admin?err=Only%20Owners%20can%20view%20the%20audit%20log.');
+
+const PAGE = 50;
+const page = Math.max(1, Number(Astro.url.searchParams.get('page')) || 1);
+const entity = Astro.url.searchParams.get('entity') ?? '';
+const entities = ['content', 'lead', 'user', 'media'];
+const entries = await new AuditLog(env.DB).list({
+  ...(entities.includes(entity) || entity.length > 0 ? { entity } : {}),
+  limit: PAGE + 1,
+  offset: (page - 1) * PAGE,
+});
+const hasMore = entries.length > PAGE;
+const fmt = (iso: string) => new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'medium', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
+const contentEntities = new Set(['settings', 'home', 'about', 'services', 'engagement', 'work', 'team', 'testimonials']);
+const href = (p: number) => `?${new URLSearchParams({ ...(entity ? { entity } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
+---
+
+<AdminLayout title="Audit log" intro={`Every change made in the admin. Entries cannot be edited or deleted by anyone, and are removed automatically after ${AUDIT_RETENTION_MONTHS} months.`}>
+  <form method="get" class="mb-5 flex flex-wrap items-end gap-3">
+    <div>
+      <label for="entity" class="admin-label">Show</label>
+      <select id="entity" name="entity" class="admin-input w-auto">
+        <option value="">Everything</option>
+        <option value="lead" selected={entity === 'lead'}>Leads</option>
+        <option value="user" selected={entity === 'user'}>Users</option>
+        <option value="media" selected={entity === 'media'}>Images</option>
+        {[...contentEntities].map((c) => <option value={c} selected={entity === c}>Content: {c}</option>)}
+      </select>
+    </div>
+    <button class="admin-btn" type="submit">Apply</button>
+  </form>
+
+  {entries.length === 0 ? <p class="admin-card text-muted">No entries.</p> : (
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <caption class="sr-only">Audit log</caption>
+        <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Item</th><th>Details</th></tr></thead>
+        <tbody>
+          {entries.slice(0, PAGE).map((e) => (
+            <tr>
+              <td class="whitespace-nowrap text-sm text-muted">{fmt(e.createdAt)}</td>
+              <td class="text-sm">{e.actorEmail}</td>
+              <td><span class="font-mono text-xs">{e.action}</span></td>
+              <td class="text-sm">{e.entity}{e.entityId && <span class="block font-mono text-xs text-muted">{e.entityId}</span>}</td>
+              <td class="text-sm text-muted">{e.summary}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+  <nav aria-label="Pages" class="mt-5 flex justify-between">
+    {page > 1 ? <a class="admin-btn" href={href(page - 1)}>← Newer</a> : <span></span>}
+    {hasMore ? <a class="admin-btn" href={href(page + 1)}>Older →</a> : <span></span>}
+  </nav>
+</AdminLayout>

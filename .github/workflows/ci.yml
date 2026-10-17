@@ -33,13 +33,14 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Build
-        run: npm run build
-
-      - name: Local secrets and database for browser tests
+      # Must exist before the build: the build copies .dev.vars into the preview output.
+      - name: Local test secrets and database
         run: |
           printf 'TURNSTILE_SECRET=1x0000000000000000000000000000000AA\nIP_HASH_SALT=ci-salt\nRESEND_API_KEY=\n' > .dev.vars
           npx wrangler d1 migrations apply vyom-website --local
+
+      - name: Build
+        run: npm run build
 
       - name: Install browser
         run: npx playwright install --with-deps chromium

@@ -3,6 +3,8 @@ import '../styles/global.css';
 import Seo from '../components/seo/Seo.astro';
 import Header from '../components/layout/Header.astro';
 import Footer from '../components/layout/Footer.astro';
+// The headline font is the largest thing above the fold; fetching it early improves LCP.
+import displayFont from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2?url';
 
 interface Props {
   title: string;
@@ -24,6 +26,7 @@ const { headerTone = 'default', ...seo } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Mark JS as available before first paint, so reveal effects never hide content without it. -->
     <script is:inline>document.documentElement.classList.add('js');</script>
+    <link rel="preload" href={displayFont} as="font" type="font/woff2" crossorigin />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <meta name="theme-color" content="#0b1324" />

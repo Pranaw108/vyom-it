@@ -92,6 +92,7 @@ npm test             # unit tests
 npm run build
 npm run test:e2e     # browser + accessibility tests (starts a preview server)
 npm run test:api     # API checks; needs `npx astro preview` running
+npm run test:perf    # byte budgets + Lighthouse; needs `npx astro preview` running
 ```
 
 ## Configuration
@@ -106,3 +107,14 @@ npm run test:api     # API checks; needs `npx astro preview` running
 | `SITE_URL` | build environment | Canonical URLs and sitemap |
 
 The D1 `database_id` in `wrangler.jsonc` is a placeholder until the client's Cloudflare account is set up.
+
+## Documentation
+
+| Document | For |
+|---|---|
+| [docs/DEPLOY.md](docs/DEPLOY.md) | First-time Cloudflare setup and the release flow |
+| [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Environments, variables and secrets |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | What to do when something goes wrong |
+| [docs/MIGRATION.md](docs/MIGRATION.md) | Moving to another host |
+| [docs/LAUNCH-CHECKLIST.md](docs/LAUNCH-CHECKLIST.md) | Client inputs and pre-launch checks |
+| [docs/ADMIN-GUIDE.md](docs/ADMIN-GUIDE.md) | How the team uses the admin panel |

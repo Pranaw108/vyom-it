@@ -18,14 +18,15 @@
     "test:e2e": "playwright test",
     "prebuild": "node scripts/pull-content.mjs",
     "seed:local": "node scripts/seed-content.mjs --local",
-    "db:migrate:local": "wrangler d1 migrations apply vyom-website --local"
+    "db:migrate:local": "wrangler d1 migrations apply vyom-website --local",
+    "test:perf": "node scripts/perf-budget.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.4.0",
     "@astrojs/preact": "^6.1.0",
     "@astrojs/sitemap": "^3.7.4",
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
-    "@fontsource/instrument-sans": "^5.3.0",
+    "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.4.0",
@@ -41,6 +42,7 @@
     "@astrojs/check": "^0.9.10",
     "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.1",
+    "lighthouse": "^13.5.0",
     "typescript": "^6.0.3",
     "vitest": "^5.0.5"
   }

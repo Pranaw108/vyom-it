@@ -70,3 +70,35 @@ test('plain text uses the default cursor; links and inputs do not', async ({ pag
   expect(await cursor('a[href="/work"]')).toBe('pointer');
   expect(await cursor('#email')).toBe('text');
 });
+
+test.describe('security (TC-025)', () => {
+  const cspPages = ['/', '/services/website-development', '/work', '/about', '/contact', '/quote', '/admin', '/admin/content/home/main'];
+  for (const path of cspPages) {
+    test(`${path} loads with no Content Security Policy violations`, async ({ page }) => {
+      const violations: string[] = [];
+      await page.addInitScript(() => {
+        document.addEventListener('securitypolicyviolation', (e) => {
+          (window as unknown as { __csp: string[] }).__csp ??= [];
+          (window as unknown as { __csp: string[] }).__csp.push(`${e.violatedDirective} ${e.blockedURI}`);
+        });
+      });
+      page.on('console', (m) => m.text().includes('Content Security Policy') && violations.push(m.text()));
+      await page.goto(path);
+      // Turnstile keeps polling, so wait a fixed moment for late scripts instead of network idle.
+      await page.waitForTimeout(1500);
+      const fromPage = await page.evaluate(() => (window as unknown as { __csp?: string[] }).__csp ?? []);
+      expect([...violations, ...fromPage]).toEqual([]);
+    });
+  }
+
+  test('static pages and Worker responses send the security headers', async ({ request }) => {
+    for (const path of ['/', '/api/leads', '/admin']) {
+      const response = await request.get(path, { maxRedirects: 0 });
+      const headers = response.headers();
+      expect(headers['x-content-type-options'], path).toBe('nosniff');
+      expect(headers['x-frame-options'], path).toBe('DENY');
+      expect(headers['strict-transport-security'], path).toContain('max-age=31536000');
+      expect(headers['content-security-policy'], path).toContain("frame-ancestors 'none'");
+    }
+  });
+});

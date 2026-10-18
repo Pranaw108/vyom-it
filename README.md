@@ -56,7 +56,7 @@ With no `RESEND_API_KEY`, emails are logged instead of sent.
 
 ## Admin panel
 
-`/admin` is protected by Cloudflare Access in production. The app also verifies the Access token on every request, checks the user's role, and requires a CSRF token for every change.
+Team members sign in to `/admin` with Google (`/auth/google/start`). The session is a signed, HttpOnly cookie valid for 12 hours; on every request the app checks the user is active in the users table, checks their role, and requires a CSRF token for every change. Cloudflare Access can be added in front as an extra layer; its token is verified too.
 
 Locally, add to `.dev.vars`:
 

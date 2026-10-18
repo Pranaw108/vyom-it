@@ -69,7 +69,7 @@ const roleHelp: Record<string, string> = {
           <select id="invite-role" name="role" class="admin-input">{ROLES.map((r) => <option value={r} selected={r === 'contributor'}>{ROLE_LABELS[r]}</option>)}</select>
         </div>
         <button class="admin-btn admin-btn--primary" type="submit">Add person</button>
-        <p class="text-xs text-muted">They also need to be allowed in the Cloudflare Access policy before they can sign in.</p>
+        <p class="text-xs text-muted">They sign in with Google using this email. While the Google sign-in app is in testing mode, also add them as a test user in Google Cloud Console.</p>
       </form>
       <div class="admin-card">
         <h2 class="mb-3 text-lg font-semibold">What each role can do</h2>

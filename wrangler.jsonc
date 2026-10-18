@@ -13,7 +13,7 @@
 		"enabled": true
 	},
 	// Non-secret settings. Secrets (TURNSTILE_SECRET, RESEND_API_KEY, IP_HASH_SALT, CSRF_SECRET,
-	// INITIAL_OWNER_EMAIL, DEPLOY_HOOK_URL) are set with
+	// INITIAL_OWNER_EMAIL, DEPLOY_HOOK_URL, SESSION_SECRET, GOOGLE_CLIENT_SECRET) are set with
 	// `wrangler secret put` in production and in .dev.vars locally. See docs/ENVIRONMENT.md.
 	"vars": {
 		"SITE_URL": "http://localhost:4321",
@@ -24,7 +24,9 @@
 		"MAIL_FROM": "",
 		// Cloudflare Access application protecting /admin (set when the client account exists).
 		"ACCESS_TEAM_DOMAIN": "",
-		"ACCESS_AUD": ""
+		"ACCESS_AUD": "",
+		// "Sign in with Google" client (public id). The secret is GOOGLE_CLIENT_SECRET.
+		"GOOGLE_CLIENT_ID": ""
 	},
 	"r2_buckets": [
 		{ "binding": "MEDIA", "bucket_name": "vyom-website-media" }

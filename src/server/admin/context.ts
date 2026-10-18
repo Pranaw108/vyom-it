@@ -3,6 +3,7 @@ import { AuditLog, type AuditActor } from './audit';
 import { createCsrfToken } from './csrf';
 import { UserStore, type AdminUser } from './users';
 import { hashIp } from '../security/hash';
+import { readSession } from './session';
 import { can, type Permission } from './permissions';
 
 export interface AdminContext {
@@ -25,9 +26,11 @@ async function signedInEmail(request: Request, env: Env): Promise<string | null>
     // Local tests may act as another user to check role rules.
     return (request.headers.get('X-Dev-Admin-Email') ?? env.DEV_ADMIN_EMAIL).toLowerCase();
   }
+  // Cloudflare Access (when configured), otherwise the "Sign in with Google" session.
   const cookie = request.headers.get('Cookie')?.match(/(?:^|;\s*)CF_Authorization=([^;]+)/)?.[1] ?? null;
   const token = request.headers.get('Cf-Access-Jwt-Assertion') ?? cookie;
-  return verifyAccessToken(token, { teamDomain: env.ACCESS_TEAM_DOMAIN, audience: env.ACCESS_AUD });
+  const viaAccess = await verifyAccessToken(token, { teamDomain: env.ACCESS_TEAM_DOMAIN, audience: env.ACCESS_AUD });
+  return viaAccess ?? (await readSession(env.SESSION_SECRET, request));
 }
 
 export async function resolveAdmin(request: Request, env: Env): Promise<AdminResolution> {

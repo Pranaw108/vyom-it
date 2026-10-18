@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (await users.findByEmail(email)) return redirectWithMessage(BACK, 'That email already has access.', 'error');
       const created = await users.create(email, name, role, admin.user.id);
       await audit.record(admin.actor, 'user.invite', 'user', created.id, `${email} added as ${ROLE_LABELS[role]}`);
-      return redirectWithMessage(BACK, `${name} added as ${ROLE_LABELS[role]}. Also add ${email} to the Cloudflare Access policy so they can sign in.`);
+      return redirectWithMessage(BACK, `${name} added as ${ROLE_LABELS[role]}. They can now sign in with Google as ${email}.`);
     }
 
     const id = Number(form.get('id'));

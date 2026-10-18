@@ -3,8 +3,8 @@
 | Environment | URL | Database | Emails | Search indexing | Admin sign-in |
 |---|---|---|---|---|---|
 | Local | `http://localhost:4321` | Local D1 copy (`.wrangler/`) | Logged to the console | Off | `DEV_ADMIN_EMAIL` (localhost only) |
-| Preview | Per pull request, from Workers Builds | Staging D1 (recommended) or production read-only | Internal test inbox only | Off (`PUBLIC_INDEXING=false`) | Cloudflare Access |
-| Production | Client domain | Production D1 | Lead inbox + visitor acknowledgement | On | Cloudflare Access |
+| Preview | Per pull request, from Workers Builds | Staging D1 (recommended) or production read-only | Internal test inbox only | Off (`PUBLIC_INDEXING=false`) | Sign in with Google |
+| Production | Client domain | Production D1 | Lead inbox + visitor acknowledgement | On | Sign in with Google (+ Cloudflare Access if enabled) |
 
 ## Settings
 
@@ -16,7 +16,10 @@
 | `LEAD_ACK_ENABLED` | var | `true` once the sending domain is verified in Resend |
 | `LEAD_REPLY_TIME` | var | Reply promise in acknowledgement emails |
 | `MAIL_FROM` | var | Sender, e.g. `Vyom IT <hello@domain>` |
-| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | var | Cloudflare Access application protecting `/admin` |
+| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | var | Cloudflare Access application protecting `/admin` (optional extra layer) |
+| `GOOGLE_CLIENT_ID` | var | "Sign in with Google" OAuth client (public) |
+| `GOOGLE_CLIENT_SECRET` | secret | Google OAuth client secret |
+| `SESSION_SECRET` | secret | Signs the admin session cookie (12 hours) |
 | `TURNSTILE_SECRET` | secret | Server-side spam check |
 | `IP_HASH_SALT` | secret | Salt for hashed IP addresses (raw IPs are never stored) |
 | `CSRF_SECRET` | secret | Signs admin form tokens |
@@ -31,3 +34,5 @@
 Local values go in `.env` (build) and `.dev.vars` (runtime); both are git-ignored. Templates: `.env.example`, `.dev.vars.example`.
 
 Cloudflare's documented Turnstile test keys (always pass) are used locally and in CI: site key `1x00000000000000000000AA`, secret `1x0000000000000000000000000000000AA`.
+
+Changing `database_id` in `wrangler.jsonc` gives the local copy a new, empty database: run `npm run db:migrate:local` and `npm run seed:local` again.

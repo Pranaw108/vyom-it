@@ -14,7 +14,8 @@ Run these from the project folder after `npx wrangler login` (signed in to the c
 | Image storage | `npx wrangler r2 bucket create vyom-website-media` | |
 | Spam protection | Dashboard → Turnstile → Add widget for the site's hostnames | Site key → build variable `PUBLIC_TURNSTILE_SITE_KEY`; secret → `TURNSTILE_SECRET` |
 | Email | Resend → add and verify the company domain (SPF, DKIM, DMARC records in Cloudflare DNS) | API key → `RESEND_API_KEY`; set `MAIL_FROM`, then `LEAD_ACK_ENABLED=true` |
-| Admin sign-in | Zero Trust → Access → Applications → Self-hosted. Path: `<domain>/admin*` and `<domain>/api/admin/*`. Policy: allow the team's emails. Identity: Google (2-step verification enforced) or one-time PIN | Team domain → `ACCESS_TEAM_DOMAIN`; Application AUD tag → `ACCESS_AUD` |
+| Admin sign-in | Google Cloud Console → new project → OAuth consent screen (External; add the team as test users) → Clients → Web application. Redirect URI: `https://<domain>/auth/google/callback` | Client ID → var `GOOGLE_CLIENT_ID`; client secret → `GOOGLE_CLIENT_SECRET` |
+| Extra admin layer (optional) | Zero Trust → Access → Self-hosted app for `<domain>/admin*` and `<domain>/api/admin/*` (needs a payment method on file, even on the free plan) | Team domain → `ACCESS_TEAM_DOMAIN`; AUD tag → `ACCESS_AUD` |
 | Analytics | Dashboard → Web Analytics → enable for the site | Cookieless; nothing to configure in code |
 
 Secrets (never committed):
@@ -26,9 +27,11 @@ npx wrangler secret put CSRF_SECRET         # any long random string
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put INITIAL_OWNER_EMAIL # the first Owner's sign-in email
 npx wrangler secret put DEPLOY_HOOK_URL     # from step 2
+npx wrangler secret put SESSION_SECRET      # any long random string
+npx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
 
-Variables in `wrangler.jsonc` → `vars`: `SITE_URL`, `COMPANY_NAME`, `LEAD_NOTIFY_TO` (comma-separated inboxes), `LEAD_REPLY_TIME`, `MAIL_FROM`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`.
+Variables in `wrangler.jsonc` → `vars`: `SITE_URL`, `COMPANY_NAME`, `LEAD_NOTIFY_TO` (comma-separated inboxes), `LEAD_REPLY_TIME`, `MAIL_FROM`, `GOOGLE_CLIENT_ID`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` (optional).
 
 ## 2. Automatic builds (Workers Builds)
 

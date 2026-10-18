@@ -1,6 +1,6 @@
 # Admin guide
 
-For the Vyom IT team. Go to **yourdomain.com/admin** and sign in with your work Google account.
+For the Vyom IT team. Go to **yourdomain.com/admin** and choose **Sign in with Google**, using the Google account an Owner added for you. You stay signed in for 12 hours.
 
 ## What you can do depends on your role
 
@@ -57,7 +57,7 @@ If someone asks you to delete their data, an Owner opens the lead and uses **Era
 
 ## Users (Owners)
 
-- **Add a person:** name, work email, role. Also add their email to the Cloudflare Access policy so they can sign in.
+- **Add a person:** name, the Google email they sign in with, and role. While the Google sign-in app is in testing mode, also add them as a test user in Google Cloud Console.
 - **Change role** or **Disable** someone at any time. It takes effect immediately.
 - There must always be at least one Owner.
 

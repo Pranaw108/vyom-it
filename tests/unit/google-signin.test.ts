@@ -1,32 +1,22 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { finishGoogleSignIn } from '../../src/server/admin/google';
 import { clearJwtKeyCache } from '../../src/server/admin/jwt';
-import { SESSION_COOKIE, createSession, readSession, readSignedValue, signValue } from '../../src/server/admin/session';
+import { readSignedValue, signValue } from '../../src/server/admin/session';
 
 const b64url = (bytes: ArrayBuffer | Uint8Array) =>
   btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const encode = (obj: object) => b64url(new TextEncoder().encode(JSON.stringify(obj)));
 
-describe('admin session cookie', () => {
-  const request = (value: string) => new Request('https://site.test/admin', { headers: { Cookie: `other=1; ${SESSION_COOKIE}=${value}` } });
-
-  it('round-trips the signed-in email', async () => {
-    expect(await readSession('secret', request(await createSession('secret', 'Owner@X.test')))).toBe('owner@x.test');
-  });
-
-  it('rejects tampered, re-signed and expired sessions', async () => {
-    const value = await createSession('secret', 'owner@x.test', 1_000);
-    const [, sig] = value.split('.');
-    const forged = `${encode({ email: 'attacker@x.test', exp: Date.now() + 999_999 })}.${sig}`;
-    expect(await readSession('secret', request(forged))).toBeNull();
-    expect(await readSession('other-secret', request(value))).toBeNull();
-    expect(await readSession('secret', request(value), 1_000 + 13 * 3_600_000)).toBeNull();
-    expect(await readSignedValue('secret', 'garbage')).toBeNull();
-  });
-
-  it('signs arbitrary payloads used for the sign-in handshake', async () => {
+describe('signed short-lived values', () => {
+  it('round-trips a payload and rejects tampering, wrong secrets and expiry', async () => {
     const v = await signValue('s', { state: 'abc', exp: Date.now() + 1000 });
     expect((await readSignedValue<{ state: string; exp: number }>('s', v))?.state).toBe('abc');
+    const [, sig] = v.split('.');
+    const forged = `${encode({ state: 'evil', exp: Date.now() + 999_999 })}.${sig}`;
+    expect(await readSignedValue('s', forged)).toBeNull();
+    expect(await readSignedValue('other', v)).toBeNull();
+    expect(await readSignedValue('s', v, Date.now() + 5000)).toBeNull();
+    expect(await readSignedValue('s', 'garbage')).toBeNull();
   });
 });
 

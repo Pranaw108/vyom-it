@@ -12,7 +12,7 @@ const random = () => [...crypto.getRandomValues(new Uint8Array(24))].map((b) => 
 // Starts "Sign in with Google". state guards against forged callbacks; nonce ties the ID token to this request.
 export const GET: APIRoute = async ({ url }) => {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.SESSION_SECRET) {
-    return Response.redirect(new URL('/admin/no-access?reason=not-configured', url), 302);
+    return Response.redirect(new URL('/auth/login?reason=google-not-configured', url), 302);
   }
   const state = random();
   const nonce = random();

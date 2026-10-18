@@ -56,12 +56,28 @@ With no `RESEND_API_KEY`, emails are logged instead of sent.
 
 ## Admin panel
 
-Team members sign in to `/admin` with Google (`/auth/google/start`). The session is a signed, HttpOnly cookie valid for 12 hours; on every request the app checks the user is active in the users table, checks their role, and requires a CSRF token for every change. Cloudflare Access can be added in front as an extra layer; its token is verified too.
+Team members sign in at `/auth/login` with a username and password, or with Google if their account email matches. There is no public sign-up: only an Owner creates accounts, and each new person sets their own password through a one-time link.
+
+- **Passwords:** PBKDF2-SHA256 (100,000 iterations, the Workers maximum) with a per-password salt and a server-side pepper (`PASSWORD_PEPPER`). Plain passwords are never stored or logged.
+- **Sessions:** stored server-side in D1 (only a SHA-256 of the token). Cookie `vyom_session` is HttpOnly, Secure and SameSite=Lax. They expire after 12 hours, or after 2 hours idle, and are revoked on logout, password change, disable or "Sign out everywhere".
+- **Defences:** one generic error for any failed sign-in; a lockout after 5 failures per username or 20 per IP in 15 minutes; Origin checks on sign-in forms; a CSRF token on every admin change.
+- **Authorisation:** checked on the server for every admin page and API. A signed-out request gets 401 (APIs) or a redirect to login (pages); a missing permission gets 403.
+- **Client accounts:** Owners can create restricted *Client* accounts that see only the permissions ticked for them.
+- **Cloudflare Access:** optional. If it is configured, its token is verified as well.
+
+One-time link from the command line (for example, the very first Owner password):
+
+```bash
+node scripts/admin-setup-link.mjs <username> --remote --site https://<site>
+```
+
+Run it in your own terminal. The link is printed only there, works once, and expires after 24 hours.
 
 Locally, add to `.dev.vars`:
 
 ```text
 CSRF_SECRET=any-local-value
+PASSWORD_PEPPER=any-local-value
 DEV_ADMIN_EMAIL=owner@localhost.test
 INITIAL_OWNER_EMAIL=owner@localhost.test
 ```
@@ -100,7 +116,7 @@ npm run test:perf    # byte budgets + Lighthouse; needs `npx astro preview` runn
 | Name | Where | Purpose |
 |---|---|---|
 | `SITE_URL`, `COMPANY_NAME`, `LEAD_NOTIFY_TO`, `LEAD_ACK_ENABLED`, `LEAD_REPLY_TIME`, `MAIL_FROM` | `wrangler.jsonc` vars | Non-secret runtime settings |
-| `TURNSTILE_SECRET`, `IP_HASH_SALT`, `RESEND_API_KEY`, `CSRF_SECRET`, `INITIAL_OWNER_EMAIL`, `DEPLOY_HOOK_URL` | `wrangler secret put` / `.dev.vars` | Secrets, never committed |
+| `TURNSTILE_SECRET`, `IP_HASH_SALT`, `RESEND_API_KEY`, `CSRF_SECRET`, `PASSWORD_PEPPER`, `SESSION_SECRET`, `GOOGLE_CLIENT_SECRET`, `INITIAL_OWNER_EMAIL`, `DEPLOY_HOOK_URL` | `wrangler secret put` / `.dev.vars` | Secrets, never committed |
 | `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | `wrangler.jsonc` vars | Cloudflare Access application for `/admin` |
 | `CONTENT_SOURCE` | build environment | `remote` in production so the build reads published D1 content |
 | `PUBLIC_TURNSTILE_SITE_KEY`, `PUBLIC_INDEXING` | build environment / `.env` | Public build settings; `PUBLIC_INDEXING=false` blocks search indexing on previews |

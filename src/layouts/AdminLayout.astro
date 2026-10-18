@@ -16,14 +16,15 @@ const path = Astro.url.pathname;
 const message = Astro.url.searchParams.get('msg');
 const error = Astro.url.searchParams.get('err');
 
-type NavIcon = 'layers' | 'message' | 'pen' | 'users' | 'shield' | 'compass';
+type NavIcon = 'layers' | 'message' | 'pen' | 'users' | 'shield' | 'compass' | 'lock';
 const nav: { label: string; href: string; icon: NavIcon; permission: Permission }[] = [
   { label: 'Dashboard', href: '/admin', icon: 'compass', permission: 'dashboard.view' },
   { label: 'Leads', href: '/admin/leads', icon: 'message', permission: 'leads.view' },
   { label: 'Content', href: '/admin/content', icon: 'pen', permission: 'content.view' },
   { label: 'Team', href: '/admin/content/team', icon: 'users', permission: 'team.edit' },
-  { label: 'Users', href: '/admin/users', icon: 'shield', permission: 'users.manage' },
+  { label: 'Accounts', href: '/admin/users', icon: 'shield', permission: 'users.manage' },
   { label: 'Audit log', href: '/admin/audit', icon: 'layers', permission: 'audit.view' },
+  { label: 'Your account', href: '/admin/account', icon: 'lock', permission: 'dashboard.view' },
 ];
 const visible = nav.filter((n) => admin.can(n.permission));
 const active = (href: string) =>
@@ -65,7 +66,7 @@ const active = (href: string) =>
         </nav>
         <div class="mt-auto hidden border-t border-white/10 px-5 py-4 text-sm lg:block">
           <p class="font-medium text-on-night">{admin.user.name}</p>
-          <p class="text-on-night-muted">{ROLE_LABELS[admin.user.role]}</p>
+          <p class="text-on-night-muted"><span class="font-mono">{admin.user.username}</span> · {ROLE_LABELS[admin.user.role]}</p>
           <a href="/auth/logout" class="mt-2 inline-block text-on-night-muted underline underline-offset-4 hover:text-on-night">Sign out</a>
         </div>
       </aside>

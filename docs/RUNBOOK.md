@@ -51,7 +51,7 @@ Restoring replaces the whole database with its state at that time: leads, conten
 
 ## A team member leaves
 
-1. **Users** → Disable. Takes effect on their next request.
+1. **Accounts** → Disable. This signs them out everywhere at once.
 2. Remove them from the Cloudflare Access policy.
 3. If they knew any secret (for example a shared API key), rotate it with `npx wrangler secret put`.
 
@@ -65,5 +65,9 @@ Rotate it immediately (`npx wrangler secret put <NAME>`), then:
 | `TURNSTILE_SECRET` | Rotate in the Turnstile dashboard |
 | `CSRF_SECRET` | Nothing else; admins may need to reload open pages |
 | `IP_HASH_SALT` | Nothing else; rate limits reset |
+| `PASSWORD_PEPPER` | Every password stops working: issue reset links to everyone (`node scripts/admin-setup-link.mjs <username> --remote --site …` for the Owner) |
+| `SESSION_SECRET` | Nothing else; a Google sign-in in progress must start again |
+
+If an account may be compromised: **Accounts** → *Sign out everywhere*, then send that person a reset link. Repeated failed sign-ins appear in the audit log as `auth.failed`.
 
 Then review **Audit log** and the Access sign-in logs for anything unexpected.

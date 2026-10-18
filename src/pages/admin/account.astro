@@ -1,0 +1,67 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { SessionStore } from '../../server/admin/sessions';
+import { ROLE_LABELS, permissionsOf } from '../../server/admin/permissions';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+const sessions = await new SessionStore(env.DB).listActive(admin.user.id);
+const fmt = (iso: string | null) => (iso ? new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso)) : '—');
+const device = (ua: string | null) => {
+  if (!ua) return 'Unknown device';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Mac OS/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
+  return `${browser}${os ? ` on ${os}` : ''}`;
+};
+---
+
+<AdminLayout title="Your account" intro={`${admin.user.username} · ${ROLE_LABELS[admin.user.role]}`}>
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    <form method="post" action="/api/admin/account" class="admin-card flex flex-col gap-4" novalidate>
+      <h2 class="text-lg font-semibold">{admin.user.hasPassword ? 'Change password' : 'Set a password'}</h2>
+      <input type="hidden" name="_csrf" value={admin.csrf} />
+      <input type="hidden" name="action" value="password" />
+      <input type="text" name="username" value={admin.user.username} autocomplete="username" hidden />
+      {admin.user.hasPassword && (
+        <div><label for="current" class="admin-label">Current password</label><input id="current" name="current" type="password" required autocomplete="current-password" class="admin-input" /></div>
+      )}
+      <div>
+        <label for="new" class="admin-label">New password</label>
+        <input id="new" name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password" class="admin-input" aria-describedby="new-help" />
+        <p id="new-help" class="mt-1 text-xs text-muted">At least 12 characters; don't include your username.</p>
+      </div>
+      <div><label for="confirm" class="admin-label">Type it again</label><input id="confirm" name="confirm" type="password" required maxlength="128" autocomplete="new-password" class="admin-input" /></div>
+      <button class="admin-btn admin-btn--primary self-start" type="submit">Save new password</button>
+      <p class="text-xs text-muted">Saving signs you out on every other device.</p>
+    </form>
+
+    <section class="admin-card flex flex-col gap-4" aria-labelledby="sessions-title">
+      <h2 id="sessions-title" class="text-lg font-semibold">Where you're signed in</h2>
+      {admin.sessionTokenHash === null && <p class="text-sm text-muted">You're signed in through a single sign-on or local developer session, which isn't listed here.</p>}
+      <ul class="flex flex-col gap-2">
+        {sessions.map((s) => (
+          <li class="flex items-center justify-between gap-3 rounded-lg bg-surface p-3 text-sm">
+            <span>
+              <span class="font-medium">{device(s.userAgent)}</span>
+              {s.tokenHash === admin.sessionTokenHash && <span class="pill pill--good ml-2">This device</span>}
+              <span class="block text-xs text-muted">{s.method === 'google' ? 'Google' : 'Password'} · signed in {fmt(s.createdAt)} · active {fmt(s.lastSeenAt)}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <form method="post" action="/api/admin/account">
+        <input type="hidden" name="_csrf" value={admin.csrf} />
+        <input type="hidden" name="action" value="sign-out-others" />
+        <button class="admin-btn" type="submit">Sign out all other devices</button>
+      </form>
+      <p class="text-xs text-muted">Sessions end after 2 hours without activity, and always after 12 hours.</p>
+    </section>
+
+    <section class="admin-card xl:col-span-2" aria-labelledby="perm-title">
+      <h2 id="perm-title" class="mb-2 text-lg font-semibold">What you can do</h2>
+      <p class="font-mono text-xs text-muted">{permissionsOf(admin.user).join(' · ')}</p>
+    </section>
+  </div>
+</AdminLayout>

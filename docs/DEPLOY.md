@@ -29,6 +29,13 @@ npx wrangler secret put INITIAL_OWNER_EMAIL # the first Owner's sign-in email
 npx wrangler secret put DEPLOY_HOOK_URL     # from step 2
 npx wrangler secret put SESSION_SECRET      # any long random string
 npx wrangler secret put GOOGLE_CLIENT_SECRET
+npx wrangler secret put PASSWORD_PEPPER     # any long random string; set once, never change
+```
+
+First Owner password, after the first deploy (run it in your own terminal; the link is printed only there):
+
+```bash
+node scripts/admin-setup-link.mjs <owner-username> --remote --site https://<domain>
 ```
 
 Variables in `wrangler.jsonc` → `vars`: `SITE_URL`, `COMPANY_NAME`, `LEAD_NOTIFY_TO` (comma-separated inboxes), `LEAD_REPLY_TIME`, `MAIL_FROM`, `GOOGLE_CLIENT_ID`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` (optional).

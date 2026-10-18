@@ -1,9 +1,10 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { finishGoogleSignIn } from '../../../server/admin/google';
-import { SESSION_COOKIE, SESSION_HOURS, cookie, createSession, readCookie, readSignedValue } from '../../../server/admin/session';
+import { cookie, readCookie, readSignedValue } from '../../../server/admin/session';
+import { bootstrapOwner } from '../../../server/admin/context';
+import { startSession } from '../../../server/admin/signin';
 import { UserStore } from '../../../server/admin/users';
-import { AuditLog } from '../../../server/admin/audit';
 import { hashIp } from '../../../server/security/hash';
 import { OAUTH_COOKIE } from './start';
 
@@ -16,7 +17,7 @@ export const GET: APIRoute = async ({ url, request }) => {
     if (detail) console.warn(`google sign-in refused: ${detail}`);
     return new Response(null, {
       status: 302,
-      headers: { Location: `/admin/no-access?reason=${reason}`, 'Set-Cookie': clearPending, 'Cache-Control': 'no-store' },
+      headers: { Location: `/auth/login?reason=${reason}`, 'Set-Cookie': clearPending, 'Cache-Control': 'no-store' },
     });
   };
 
@@ -34,15 +35,15 @@ export const GET: APIRoute = async ({ url, request }) => {
   );
   if ('error' in result) return fail('failed', result.error);
 
-  const user = await new UserStore(env.DB).findByEmail(result.email);
-  if (user?.status === 'active') {
-    const ipHash = await hashIp(request.headers.get('CF-Connecting-IP'), env.IP_HASH_SALT);
-    await new AuditLog(env.DB).record({ id: user.id, email: user.email, ipHash }, 'auth.signin', 'user', user.id, 'Signed in with Google');
-  }
+  // Google proves who this is; only an existing, active account (or the very first Owner) gets a session.
+  const users = new UserStore(env.DB);
+  const ipHash = await hashIp(request.headers.get('CF-Connecting-IP'), env.IP_HASH_SALT);
+  const user = (await users.findByEmail(result.email)) ?? (await bootstrapOwner(users, env, result.email, ipHash));
+  if (!user) return fail('no-account', `no admin account for ${result.email.replace(/^(.).*@/, '$1***@')}`);
+  if (user.status !== 'active') return fail('disabled');
 
-  // The session only proves who this is; /admin still checks the users table on every request.
   const headers = new Headers({ Location: '/admin', 'Cache-Control': 'no-store' });
   headers.append('Set-Cookie', clearPending);
-  headers.append('Set-Cookie', cookie(SESSION_COOKIE, await createSession(env.SESSION_SECRET, result.email), SESSION_HOURS * 3600, secure));
+  headers.append('Set-Cookie', await startSession(env, request, user, 'google'));
   return new Response(null, { status: 302, headers });
 };

@@ -15,9 +15,10 @@ async function csrfFor(page: Page): Promise<string> {
 async function addUser(page: Page, name: string, email: string, role: string) {
   await page.goto('/admin/users');
   await page.getByLabel('Name', { exact: true }).fill(name);
-  await page.getByLabel('Work email').fill(email);
-  await page.locator('#invite-role').selectOption(role);
-  await page.getByRole('button', { name: 'Add person' }).click();
+  await page.getByLabel('Username').fill(email.split('@')[0]!.toLowerCase());
+  await page.getByLabel('Email', { exact: true }).fill(email);
+  await page.locator('#new-role').selectOption(role);
+  await page.getByRole('button', { name: 'Create account' }).click();
 }
 
 test('owner sees the dashboard with health and all sections', async ({ page }) => {
@@ -25,7 +26,7 @@ test('owner sees the dashboard with health and all sections', async ({ page }) =
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await expect(page.getByLabel('System health')).toContainText('Lead emails');
   const nav = page.getByRole('navigation', { name: 'Admin' });
-  for (const item of ['Dashboard', 'Leads', 'Content', 'Team', 'Users', 'Audit log']) await expect(nav.getByRole('link', { name: item })).toBeVisible();
+  for (const item of ['Dashboard', 'Leads', 'Content', 'Team', 'Accounts', 'Audit log', 'Your account']) await expect(nav.getByRole('link', { name: item })).toBeVisible();
 });
 
 test('editing and publishing content is recorded (AC-I3, TC-031)', async ({ page }) => {
@@ -58,14 +59,14 @@ test('publishing is refused while content breaks the rules (FR-159)', async ({ p
 test('a contributor can edit but cannot publish, even through the API (TC-029)', async ({ page, request }) => {
   const email = `contrib-${stamp}@localhost.test`;
   await addUser(page, 'Test Contributor', email, 'contributor');
-  await expect(page.getByRole('status')).toContainText('added as Contributor');
+  await expect(page.getByRole('status').first()).toContainText('added as Contributor');
 
   await page.setExtraHTTPHeaders({ 'X-Dev-Admin-Email': email });
   await page.goto('/admin/content/services/website-development');
   await expect(page.getByRole('button', { name: 'Publish' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Submit for review' })).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Admin' });
-  await expect(nav.getByRole('link', { name: 'Users' })).toHaveCount(0);
+  await expect(nav.getByRole('link', { name: 'Accounts' })).toHaveCount(0);
 
   const csrf = await csrfFor(page);
   const response = await page.request.post('/api/admin/content', {
@@ -98,7 +99,7 @@ test('a disabled user loses access on their next request (TC-032)', async ({ pag
   await addUser(page, 'Test Manager', email, 'content_manager');
   const row = page.locator('tr', { hasText: email });
   await row.getByRole('button', { name: 'Disable' }).click();
-  await expect(page.getByRole('status')).toContainText('can no longer sign in');
+  await expect(page.getByRole('status').first()).toContainText('can no longer sign in');
 
   await page.setExtraHTTPHeaders({ 'X-Dev-Admin-Email': email });
   await page.goto('/admin');

@@ -109,7 +109,7 @@ export class LeadAdmin {
   async setStatus(admin: AdminContext, id: number, status: LeadStatus): Promise<boolean> {
     const results = await this.db.batch([
       this.db.prepare(`UPDATE leads SET status = ?, updated_at = ? WHERE id = ? AND erased_at IS NULL AND status != ?`).bind(status, new Date().toISOString(), id, status),
-      this.db.prepare(`INSERT INTO lead_events (lead_id, event, actor, detail) SELECT ?, 'status_changed', ?, ? WHERE changes() > 0`).bind(id, admin.user.email, `to ${status}`),
+      this.db.prepare(`INSERT INTO lead_events (lead_id, event, actor, detail) SELECT ?, 'status_changed', ?, ? WHERE changes() > 0`).bind(id, admin.user.username, `to ${status}`),
       this.audit.statement(admin.actor, 'lead.status', 'lead', id, `Status set to ${status}`),
     ]);
     return Boolean(results[0]?.meta.changes);
@@ -117,7 +117,7 @@ export class LeadAdmin {
 
   async addNote(admin: AdminContext, id: number, body: string): Promise<void> {
     await this.db.batch([
-      this.db.prepare('INSERT INTO lead_notes (lead_id, author_id, author_email, body) SELECT id, ?, ?, ? FROM leads WHERE id = ? AND erased_at IS NULL').bind(admin.user.id, admin.user.email, body, id),
+      this.db.prepare('INSERT INTO lead_notes (lead_id, author_id, author_email, body) SELECT id, ?, ?, ? FROM leads WHERE id = ? AND erased_at IS NULL').bind(admin.user.id, admin.user.username, body, id),
       this.audit.statement(admin.actor, 'lead.note', 'lead', id, 'Internal note added'),
     ]);
   }
@@ -133,7 +133,7 @@ export class LeadAdmin {
            WHERE id = ? AND erased_at IS NULL`,
         )
         .bind(now, now, id),
-      this.db.prepare(`INSERT INTO lead_events (lead_id, event, actor, detail) SELECT ?, 'erased', ?, ? WHERE changes() > 0`).bind(id, admin.user.email, reason),
+      this.db.prepare(`INSERT INTO lead_events (lead_id, event, actor, detail) SELECT ?, 'erased', ?, ? WHERE changes() > 0`).bind(id, admin.user.username, reason),
       this.audit.statement(admin.actor, 'lead.erase', 'lead', id, `Personal data erased. Reason: ${reason}`),
       this.db.prepare(`UPDATE lead_notes SET body = '[erased]' WHERE lead_id = ?`).bind(id),
     ]);

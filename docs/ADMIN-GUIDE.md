@@ -1,6 +1,11 @@
 # Admin guide
 
-For the Vyom IT team. Go to **yourdomain.com/admin** and choose **Sign in with Google**, using the Google account an Owner added for you. You stay signed in for 12 hours.
+For the Vyom IT team and invited clients. Go to **yourdomain.com/admin** and sign in with your **username and password**. If your account email is a Google account, you can choose **Sign in with Google** instead.
+
+- **Your first password:** an Owner sends you a one-time link. Open it, choose a password of at least 12 characters, and you are signed in. The link works once and expires after 72 hours.
+- **Staying signed in:** up to 12 hours, or 2 hours without activity.
+- **Forgot your password?** Ask an Owner for a new link. Email reset is not available yet.
+- **Your account** (in the menu): change your password, see where you are signed in, and sign out of other devices. Changing your password signs out every other device.
 
 ## What you can do depends on your role
 
@@ -11,6 +16,7 @@ For the Vyom IT team. Go to **yourdomain.com/admin** and choose **Sign in with G
 | Contributor | Edit content and send it for review |
 | Sales | See and update leads |
 | Viewer | Read content |
+| Client | Only what the Owner ticked for them (for example: see content, see leads). Never accounts, settings, erasing data or the audit log |
 
 ## The dashboard
 
@@ -55,11 +61,14 @@ Only publish someone after they have agreed in writing. Record the date and wher
 
 If someone asks you to delete their data, an Owner opens the lead and uses **Erase personal data**. This cannot be undone.
 
-## Users (Owners)
+## Accounts (Owners)
 
-- **Add a person:** name, the Google email they sign in with, and role. While the Google sign-in app is in testing mode, also add them as a test user in Google Cloud Console.
-- **Change role** or **Disable** someone at any time. It takes effect immediately.
+- **Create account:** name, username, email and role. For a Client, tick what they may see. You get a one-time setup link: send it to the person privately. It is shown only once.
+- **Reset link:** creates a new one-time link (valid 24 hours) when someone forgets their password. Earlier links stop working.
+- **Sign out everywhere:** ends all of that person's sessions at once.
+- **Change role** or **Disable** someone at any time. Disabling also signs them out everywhere.
 - There must always be at least one Owner.
+- There is no public sign-up. Nobody can create an account except an Owner.
 
 ## Audit log (Owners)
 

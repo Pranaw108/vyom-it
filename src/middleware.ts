@@ -40,6 +40,10 @@ async function guardAdmin(context: APIContext, next: MiddlewareNext): Promise<Re
       await drain(context.request);
       return Response.json({ error: resolution.reason }, { status: resolution.reason === 'signed-out' ? 401 : 403 });
     }
+    // Signed-out visitors go to the login page; signed-in people without access see why.
+    if (resolution.reason === 'signed-out' && context.url.pathname !== '/admin/no-access') {
+      return context.redirect(`/auth/login?next=${encodeURIComponent(context.url.pathname)}`, 302);
+    }
     context.locals.adminDenied = resolution;
     if (context.url.pathname !== '/admin/no-access') return context.redirect('/admin/no-access', 302);
     return next();
@@ -48,7 +52,7 @@ async function guardAdmin(context: APIContext, next: MiddlewareNext): Promise<Re
   // Every state-changing request must come from this site and carry this user's CSRF token.
   if (context.request.method !== 'GET' && context.request.method !== 'HEAD') {
     const token = context.request.headers.get('X-CSRF-Token') ?? (await formToken(context.request));
-    const valid = isSameOrigin(context.request) && (await verifyCsrfToken(env.CSRF_SECRET, resolution.admin.user.email, token));
+    const valid = isSameOrigin(context.request) && (await verifyCsrfToken(env.CSRF_SECRET, `user:${resolution.admin.user.id}`, token));
     if (!valid) {
       await drain(context.request);
       return Response.json({ error: 'csrf' }, { status: 403 });

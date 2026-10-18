@@ -2,54 +2,98 @@
 import { env } from 'cloudflare:workers';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { UserStore } from '../../server/admin/users';
-import { ROLES, ROLE_LABELS } from '../../server/admin/permissions';
+import { CLIENT_GRANTABLE, ROLES, ROLE_LABELS } from '../../server/admin/permissions';
+import { cookie, readCookie, readSignedValue } from '../../server/admin/session';
+import { LINK_COOKIE } from '../api/admin/users';
 
 export const prerender = false;
 
 const admin = Astro.locals.admin!;
-if (!admin.can('users.manage')) return Astro.redirect('/admin?err=Only%20Owners%20can%20manage%20users.');
+if (!admin.can('users.manage')) return Astro.redirect('/admin?err=Only%20Owners%20can%20manage%20accounts.');
 const users = await new UserStore(env.DB).list();
+
+// A one-time link created by the last action, shown once and then cleared.
+const link = await readSignedValue<{ url: string; username: string; purpose: 'setup' | 'reset'; exp: number }>(env.CSRF_SECRET, readCookie(Astro.request, LINK_COOKIE));
+if (link) Astro.response.headers.append('Set-Cookie', cookie(LINK_COOKIE, '', 0, Astro.url.protocol === 'https:', '/admin/users'));
+
 const fmt = (iso: string | null) => (iso ? new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }).format(new Date(iso)) : 'Never');
 const roleHelp: Record<string, string> = {
-  owner: 'Everything, including users, leads export and erasing data.',
+  owner: 'Everything, including accounts, site settings, erasing data and the audit log.',
   content_manager: 'Edit and publish content and team profiles.',
   contributor: 'Edit content and submit it for review.',
   sales: 'View and update leads.',
   viewer: 'Read-only access to content.',
+  client: 'Only the permissions you tick. Never accounts, settings, erasing data or the audit log.',
 };
+const grantLabel = new Map<string, string>(CLIENT_GRANTABLE.map((g) => [g.permission, g.label]));
 ---
 
-<AdminLayout title="Users" intro="Who can sign in to the admin, and what they can do.">
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+<AdminLayout title="Accounts" intro="Who can sign in to the admin and what they can do. There is no public sign-up: only Owners create accounts.">
+  {link && (
+    <section class="admin-card mb-6 flex flex-col gap-3" aria-labelledby="link-title" role="status">
+      <h2 id="link-title" class="text-lg font-semibold">One-time {link.purpose === 'reset' ? 'password reset' : 'setup'} link for {link.username}</h2>
+      <p class="text-sm text-muted">Send this to the person through a private channel (for example a direct message). It works once and expires in {link.purpose === 'reset' ? '24' : '72'} hours. It is shown only now; if you lose it, create a new one.</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <input class="admin-input min-w-0 flex-1 font-mono text-sm" readonly value={link.url} id="one-time-link" aria-label="One-time link" />
+        <button type="button" class="admin-btn" data-copy="one-time-link">Copy</button>
+      </div>
+    </section>
+  )}
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
     <div class="admin-table-wrap min-w-0">
       <table class="admin-table">
-        <caption class="sr-only">Admin users</caption>
-        <thead><tr><th>Person</th><th>Role</th><th>Status</th><th>Last seen</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <caption class="sr-only">Accounts</caption>
+        <thead><tr><th>Person</th><th>Role and access</th><th>Status</th><th>Last seen</th><th><span class="sr-only">Actions</span></th></tr></thead>
         <tbody>
           {users.map((u) => (
             <tr>
-              <td><span class="font-medium">{u.name}</span>{u.id === admin.user.id && <span class="text-xs text-muted"> (you)</span>}<span class="block text-xs text-muted">{u.email}</span></td>
               <td>
-                <form method="post" action="/api/admin/users" class="flex items-center gap-2">
+                <span class="font-medium">{u.name}</span>{u.id === admin.user.id && <span class="text-xs text-muted"> (you)</span>}
+                <span class="block font-mono text-xs text-muted">{u.username}</span>
+                <span class="block text-xs text-muted">{u.email}</span>
+                {!u.hasPassword && <span class="pill pill--warn mt-1">No password yet</span>}
+              </td>
+              <td>
+                <form method="post" action="/api/admin/users" class="flex flex-col gap-2" data-role-form>
                   <input type="hidden" name="_csrf" value={admin.csrf} />
                   <input type="hidden" name="action" value="role" />
                   <input type="hidden" name="id" value={u.id} />
-                  <label class="sr-only" for={`role-${u.id}`}>Role for {u.name}</label>
-                  <select id={`role-${u.id}`} name="role" class="admin-input w-auto">
-                    {ROLES.map((r) => <option value={r} selected={u.role === r}>{ROLE_LABELS[r]}</option>)}
-                  </select>
-                  <button class="admin-btn" type="submit">Save</button>
+                  <span class="flex items-center gap-2">
+                    <label class="sr-only" for={`role-${u.id}`}>Role for {u.name}</label>
+                    <select id={`role-${u.id}`} name="role" class="admin-input w-auto" data-role-select>
+                      {ROLES.map((r) => <option value={r} selected={u.role === r}>{ROLE_LABELS[r]}</option>)}
+                    </select>
+                    <button class="admin-btn" type="submit">Save</button>
+                  </span>
+                  <fieldset class="flex flex-col gap-1 text-sm" data-client-perms hidden={u.role !== 'client'}>
+                    <legend class="mb-1 text-xs font-semibold text-muted">Client can:</legend>
+                    {CLIENT_GRANTABLE.map((g) => (
+                      <label class="flex items-center gap-2"><input type="checkbox" name="permissions" value={g.permission} checked={u.permissions.includes(g.permission)} />{g.label}</label>
+                    ))}
+                  </fieldset>
+                  {u.role === 'client' && (
+                    <span class="text-xs text-muted">{u.permissions.length ? u.permissions.map((p) => grantLabel.get(p) ?? p).join(' · ') : 'Dashboard only'}</span>
+                  )}
                 </form>
               </td>
               <td><span class:list={['pill', u.status === 'active' ? 'pill--good' : 'pill--muted']}>{u.status}</span></td>
-              <td class="text-sm text-muted">{fmt(u.lastSeenAt)}</td>
+              <td class="whitespace-nowrap text-sm text-muted">{fmt(u.lastSeenAt)}</td>
               <td>
-                <form method="post" action="/api/admin/users">
-                  <input type="hidden" name="_csrf" value={admin.csrf} />
-                  <input type="hidden" name="action" value={u.status === 'active' ? 'disable' : 'enable'} />
-                  <input type="hidden" name="id" value={u.id} />
-                  <button class:list={['admin-btn', u.status === 'active' && 'admin-btn--danger']} type="submit">{u.status === 'active' ? 'Disable' : 'Enable'}</button>
-                </form>
+                <div class="flex flex-col gap-1.5">
+                  {[
+                    { action: 'reset', label: u.hasPassword ? 'Reset link' : 'Setup link', show: u.status === 'active' },
+                    { action: 'revoke', label: 'Sign out everywhere', show: true },
+                    { action: u.status === 'active' ? 'disable' : 'enable', label: u.status === 'active' ? 'Disable' : 'Enable', show: true },
+                  ].filter((b) => b.show).map((b) => (
+                    <form method="post" action="/api/admin/users">
+                      <input type="hidden" name="_csrf" value={admin.csrf} />
+                      <input type="hidden" name="action" value={b.action} />
+                      <input type="hidden" name="id" value={u.id} />
+                      <button class:list={['admin-btn w-full whitespace-nowrap', b.action === 'disable' && 'admin-btn--danger']} type="submit">{b.label}</button>
+                    </form>
+                  ))}
+                </div>
               </td>
             </tr>
           ))}
@@ -58,18 +102,31 @@ const roleHelp: Record<string, string> = {
     </div>
 
     <aside class="flex flex-col gap-6">
-      <form method="post" action="/api/admin/users" class="admin-card flex flex-col gap-3">
-        <h2 class="text-lg font-semibold">Add a person</h2>
+      <form method="post" action="/api/admin/users" class="admin-card flex flex-col gap-3" data-role-form>
+        <h2 class="text-lg font-semibold">Create an account</h2>
         <input type="hidden" name="_csrf" value={admin.csrf} />
-        <input type="hidden" name="action" value="invite" />
-        <div><label for="invite-name" class="admin-label">Name</label><input id="invite-name" name="name" required class="admin-input" autocomplete="off" /></div>
-        <div><label for="invite-email" class="admin-label">Work email</label><input id="invite-email" name="email" type="email" required class="admin-input" autocomplete="off" /></div>
+        <input type="hidden" name="action" value="create" />
+        <div><label for="new-name" class="admin-label">Name</label><input id="new-name" name="name" required class="admin-input" autocomplete="off" /></div>
         <div>
-          <label for="invite-role" class="admin-label">Role</label>
-          <select id="invite-role" name="role" class="admin-input">{ROLES.map((r) => <option value={r} selected={r === 'contributor'}>{ROLE_LABELS[r]}</option>)}</select>
+          <label for="new-username" class="admin-label">Username</label>
+          <input id="new-username" name="username" required class="admin-input font-mono" autocomplete="off" autocapitalize="none" spellcheck="false" />
+          <p class="mt-1 text-xs text-muted">3–32 lowercase letters, numbers, dots, hyphens or underscores.</p>
         </div>
-        <button class="admin-btn admin-btn--primary" type="submit">Add person</button>
-        <p class="text-xs text-muted">They sign in with Google using this email. While the Google sign-in app is in testing mode, also add them as a test user in Google Cloud Console.</p>
+        <div>
+          <label for="new-email" class="admin-label">Email</label>
+          <input id="new-email" name="email" type="email" required class="admin-input" autocomplete="off" />
+          <p class="mt-1 text-xs text-muted">If it's a Google account, they can also use “Sign in with Google”.</p>
+        </div>
+        <div>
+          <label for="new-role" class="admin-label">Role</label>
+          <select id="new-role" name="role" class="admin-input" data-role-select>{ROLES.map((r) => <option value={r} selected={r === 'client'}>{ROLE_LABELS[r]}</option>)}</select>
+        </div>
+        <fieldset class="flex flex-col gap-1.5 text-sm" data-client-perms>
+          <legend class="admin-label">Client can:</legend>
+          {CLIENT_GRANTABLE.map((g) => <label class="flex items-center gap-2"><input type="checkbox" name="permissions" value={g.permission} checked={g.permission === 'content.view' || g.permission === 'leads.view'} />{g.label}</label>)}
+        </fieldset>
+        <button class="admin-btn admin-btn--primary" type="submit">Create account</button>
+        <p class="text-xs text-muted">You get a one-time link for the person to choose their own password. Nobody, including you, ever sees their password.</p>
       </form>
       <div class="admin-card">
         <h2 class="mb-3 text-lg font-semibold">What each role can do</h2>
@@ -80,3 +137,28 @@ const roleHelp: Record<string, string> = {
     </aside>
   </div>
 </AdminLayout>
+
+<script>
+  // Show client permission boxes only when the Client role is selected.
+  document.querySelectorAll<HTMLFormElement>('[data-role-form]').forEach((form) => {
+    const select = form.querySelector('[data-role-select]') as HTMLSelectElement | null;
+    const perms = form.querySelector<HTMLElement>('[data-client-perms]');
+    const sync = () => {
+      if (perms && select) perms.hidden = select.value !== 'client';
+    };
+    select?.addEventListener('change', sync);
+    sync();
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const input = document.getElementById(button.dataset.copy!) as HTMLInputElement | null;
+      if (!input) return;
+      try {
+        await navigator.clipboard.writeText(input.value);
+        button.textContent = 'Copied';
+      } catch {
+        input.select();
+      }
+    });
+  });
+</script>

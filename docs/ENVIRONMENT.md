@@ -19,7 +19,8 @@
 | `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | var | Cloudflare Access application protecting `/admin` (optional extra layer) |
 | `GOOGLE_CLIENT_ID` | var | "Sign in with Google" OAuth client (public) |
 | `GOOGLE_CLIENT_SECRET` | secret | Google OAuth client secret |
-| `SESSION_SECRET` | secret | Signs the admin session cookie (12 hours) |
+| `SESSION_SECRET` | secret | Signs the short-lived Google sign-in state cookie |
+| `PASSWORD_PEPPER` | secret | Mixed into every password hash. Required for password sign-in. Changing it makes every existing password stop working; everyone then needs a reset link |
 | `TURNSTILE_SECRET` | secret | Server-side spam check |
 | `IP_HASH_SALT` | secret | Salt for hashed IP addresses (raw IPs are never stored) |
 | `CSRF_SECRET` | secret | Signs admin form tokens |
@@ -34,5 +35,7 @@
 Local values go in `.env` (build) and `.dev.vars` (runtime); both are git-ignored. Templates: `.env.example`, `.dev.vars.example`.
 
 Cloudflare's documented Turnstile test keys (always pass) are used locally and in CI: site key `1x00000000000000000000AA`, secret `1x0000000000000000000000000000000AA`.
+
+D1 cannot drop or rebuild a table that other tables reference with foreign keys (not even with `PRAGMA defer_foreign_keys`). Keep migrations additive: `ALTER TABLE … ADD COLUMN` and new tables only.
 
 Changing `database_id` in `wrangler.jsonc` gives the local copy a new, empty database: run `npm run db:migrate:local` and `npm run seed:local` again.

@@ -1,0 +1,80 @@
+---
+import { env } from 'cloudflare:workers';
+import AuthLayout from '../../layouts/AuthLayout.astro';
+import { attemptPasswordLogin } from '../../server/admin/password-login';
+import { safeNext, sameSiteForm, startSession } from '../../server/admin/signin';
+import { hashIp } from '../../server/security/hash';
+
+export const prerender = false;
+
+const next = safeNext(Astro.url.searchParams.get('next'));
+const googleReady = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.SESSION_SECRET);
+let error: string | null = null;
+let username = '';
+
+const notices: Record<string, string> = {
+  'signed-out': 'You have signed out.',
+  expired: 'That sign-in attempt expired. Please try again.',
+  cancelled: 'Google sign-in was cancelled.',
+  failed: 'Google could not confirm your sign-in. Please try again.',
+  'no-account': 'That Google account has no admin access. Ask the site owner to add you.',
+  disabled: 'This account has been turned off. Contact the site owner.',
+  'google-not-configured': 'Google sign-in is not set up here yet. Use your username and password.',
+  'not-configured': 'Google sign-in is not set up here yet. Use your username and password.',
+};
+const notice = notices[Astro.url.searchParams.get('reason') ?? ''];
+
+if (Astro.request.method === 'POST') {
+  if (!sameSiteForm(Astro.request)) {
+    Astro.response.status = 403;
+    error = 'This sign-in form must be sent from this website. Reload the page and try again.';
+  } else {
+    const form = await Astro.request.formData();
+    username = String(form.get('username') ?? '').trim().slice(0, 64);
+    const password = String(form.get('password') ?? '');
+    const ipHash = await hashIp(Astro.request.headers.get('CF-Connecting-IP'), env.IP_HASH_SALT);
+    const result = await attemptPasswordLogin(env, ipHash, username, password);
+    if (result.ok) {
+      const cookie = await startSession(env, Astro.request, result.user, 'password');
+      return new Response(null, { status: 303, headers: { Location: next, 'Set-Cookie': cookie, 'Cache-Control': 'no-store' } });
+    }
+    Astro.response.status = result.status;
+    error = result.message;
+  }
+}
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<AuthLayout title="Sign in">
+  <div class="flex flex-col gap-1.5">
+    <h1 class="text-2xl font-semibold">Sign in to the admin</h1>
+    <p class="text-muted">For the website team only.</p>
+  </div>
+
+  {notice && !error && <p class="auth-note" role="status">{notice}</p>}
+  {error && <p class="auth-error" role="alert" id="login-error">{error}</p>}
+
+  <form method="post" class="auth-form" novalidate>
+    <div>
+      <label for="username" class="auth-label">Username</label>
+      <input id="username" name="username" class="auth-input" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="64" value={username} aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} autofocus />
+    </div>
+    <div>
+      <label for="password" class="auth-label">Password</label>
+      <input id="password" name="password" type="password" class="auth-input" autocomplete="current-password" required maxlength="128" aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} />
+    </div>
+    <button type="submit" class="auth-btn">Sign in</button>
+  </form>
+
+  {googleReady && (
+    <>
+      <p class="auth-divider">or</p>
+      <a href="/auth/google/start" class="auth-btn auth-btn--ghost">
+        <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" /><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" /><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" /><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" /></svg>
+        Sign in with Google
+      </a>
+    </>
+  )}
+
+  <p class="text-sm text-muted">Forgot your password? Ask the site owner for a reset link. Accounts are created by the owner only.</p>
+</AuthLayout>

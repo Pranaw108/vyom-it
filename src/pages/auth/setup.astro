@@ -1,0 +1,118 @@
+---
+import { env } from 'cloudflare:workers';
+import AuthLayout from '../../layouts/AuthLayout.astro';
+import { AccountTokens } from '../../server/admin/account-tokens';
+import { AuditLog } from '../../server/admin/audit';
+import { hashPassword, passwordProblems } from '../../server/admin/password';
+import { SessionStore } from '../../server/admin/sessions';
+import { sameSiteForm, startSession } from '../../server/admin/signin';
+import { UserStore } from '../../server/admin/users';
+import { hashIp } from '../../server/security/hash';
+
+export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'no-store');
+// The token is in the URL: never send it to other sites in the Referer header.
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
+
+const tokens = new AccountTokens(env.DB);
+const users = new UserStore(env.DB);
+const isPost = Astro.request.method === 'POST';
+const form = isPost && sameSiteForm(Astro.request) ? await Astro.request.formData() : null;
+const token = String((form?.get('token') ?? Astro.url.searchParams.get('token')) || '');
+const found = await tokens.peek(token);
+const user = found ? await users.get(found.userId) : null;
+const usable = Boolean(found && user && user.status === 'active');
+let problems: string[] = [];
+
+if (isPost && !form) {
+  Astro.response.status = 403;
+  problems = ['This form must be sent from this website. Open the link again.'];
+} else if (form && usable && user && found) {
+  const password = String(form.get('password') ?? '');
+  const confirm = String(form.get('confirm') ?? '');
+  problems = passwordProblems(password, user.username);
+  if (password !== confirm) problems.push('The two passwords do not match.');
+  if (!env.PASSWORD_PEPPER) problems = ['Password sign-in is not set up on the server yet. Ask the site owner.'];
+
+  if (problems.length === 0) {
+    // Consume first: only one request can use the link, even if it is submitted twice.
+    if (!(await tokens.consume(token))) {
+      problems = ['This link has just been used or has expired. Ask the site owner for a new one.'];
+    } else {
+      await users.setPasswordHash(user.id, await hashPassword(password, env.PASSWORD_PEPPER));
+      // A new password signs the account out everywhere else.
+      const revoked = await new SessionStore(env.DB).revokeAll(user.id);
+      const ipHash = await hashIp(Astro.request.headers.get('CF-Connecting-IP'), env.IP_HASH_SALT);
+      await new AuditLog(env.DB).record({ id: user.id, email: user.username, ipHash }, found.purpose === 'setup' ? 'auth.password_set' : 'auth.password_reset', 'user', user.id, `Password set with a one-time link; ${revoked} other session(s) signed out`);
+      const cookie = await startSession(env, Astro.request, user, 'password');
+      return new Response(null, { status: 303, headers: { Location: '/admin', 'Set-Cookie': cookie, 'Cache-Control': 'no-store' } });
+    }
+  }
+  Astro.response.status = 422;
+} else if (!usable) {
+  Astro.response.status = 410;
+}
+const heading = found?.purpose === 'reset' ? 'Choose a new password' : 'Set up your account';
+---
+
+<AuthLayout title={usable ? heading : 'Link not valid'}>
+  {!usable ? (
+    <>
+      <div class="flex flex-col gap-2">
+        <h1 class="text-2xl font-semibold">This link is not valid</h1>
+        <p class="text-muted">It may have expired, been used already, or been replaced by a newer link. Ask the site owner to send you a new one.</p>
+      </div>
+      <a href="/auth/login" class="auth-btn auth-btn--ghost">Go to sign in</a>
+    </>
+  ) : (
+    <>
+      <div class="flex flex-col gap-1.5">
+        <h1 class="text-2xl font-semibold">{heading}</h1>
+        <p class="text-muted">Username: <span class="font-mono font-medium text-ink">{user!.username}</span></p>
+      </div>
+      {problems.length > 0 && (
+        <div class="auth-error" role="alert" id="setup-errors">
+          <ul class="list-disc pl-5">{problems.map((p) => <li>{p}</li>)}</ul>
+        </div>
+      )}
+      <form method="post" class="auth-form" novalidate>
+        <input type="hidden" name="token" value={token} />
+        <input type="text" name="username" value={user!.username} autocomplete="username" hidden />
+        <div>
+          <label for="password" class="auth-label">New password</label>
+          <input id="password" name="password" type="password" class="auth-input" autocomplete="new-password" required minlength="12" maxlength="128" aria-describedby="password-rules" />
+          <p id="password-rules" class="mt-1 text-sm text-muted">At least 12 characters. A few random words work well. Don't include your username.</p>
+        </div>
+        <div>
+          <label for="confirm" class="auth-label">Type it again</label>
+          <input id="confirm" name="confirm" type="password" class="auth-input" autocomplete="new-password" required maxlength="128" />
+        </div>
+        <button type="button" class="text-sm font-medium text-accent underline underline-offset-4 justify-self-start" data-generate>Suggest a strong password</button>
+        <p class="hidden rounded-xl bg-mist p-3 text-sm" data-generated aria-live="polite"></p>
+        <button type="submit" class="auth-btn">Save password and sign in</button>
+      </form>
+    </>
+  )}
+</AuthLayout>
+
+<script>
+  // Generates a long random password in the browser and fills both fields; it is never sent anywhere else.
+  const button = document.querySelector<HTMLButtonElement>('[data-generate]');
+  const output = document.querySelector<HTMLElement>('[data-generated]');
+  button?.addEventListener('click', () => {
+    const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789-_!@#%';
+    const bytes = crypto.getRandomValues(new Uint8Array(20));
+    const password = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+    for (const id of ['password', 'confirm']) {
+      const input = document.getElementById(id) as HTMLInputElement | null;
+      if (input) {
+        input.value = password;
+        input.type = 'text';
+      }
+    }
+    if (output) {
+      output.textContent = 'Suggested password filled in above. Save it in your password manager before continuing.';
+      output.classList.remove('hidden');
+    }
+  });
+</script>

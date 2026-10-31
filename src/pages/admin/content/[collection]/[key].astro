@@ -7,6 +7,8 @@ import { blank, forEditor } from '../../../../lib/content/fields';
 import { describeState } from '../../../../lib/content/status';
 import { ContentStore } from '../../../../server/content/store';
 import { validationIssues } from '../../../../server/content/service';
+import { EVENT_LABELS, changedFields, isLiveVersion } from '../../../../lib/content/history';
+import { TRASH_DAYS } from '../../../../server/content/store';
 
 export const prerender = false;
 
@@ -16,7 +18,8 @@ if (!def || !admin.can('content.view')) return Astro.redirect('/admin/content?er
 
 const key = Astro.params.key ?? 'new';
 const isNew = key === 'new';
-const entry = isNew ? null : await new ContentStore(env.DB).get(def.name, key);
+const store = new ContentStore(env.DB);
+const entry = isNew ? null : await store.get(def.name, key);
 if (!isNew && !entry) return Astro.redirect(`/admin/content/${def.name}?err=That%20item%20could%20not%20be%20found.`);
 if (isNew && (def.kind === 'single' || !admin.can('content.edit') || !admin.can(def.editPermission))) {
   return Astro.redirect(`/admin/content/${def.name}?err=You%20cannot%20add%20items%20here.`);
@@ -26,6 +29,17 @@ const initial = forEditor(def.fields, entry?.draft ?? blank(def.fields));
 const state = entry ? describeState(entry) : { label: 'New, not saved', tone: 'muted' as const };
 const title = entry ? def.titleOf(entry.draft) : `New ${def.label.toLowerCase().replace(/s$/, '')}`;
 const backHref = def.kind === 'single' ? '/admin/content' : `/admin/content/${def.name}`;
+
+const canEdit = admin.can('content.edit') && admin.can(def.editPermission);
+const canTrash = def.kind === 'list' && admin.can('content.publish') && admin.can(def.editPermission);
+const versions = entry ? await store.versions(entry.id) : [];
+const history = versions.map((v, i) => ({
+  ...v,
+  changed: changedFields(def.fields, versions[i + 1]?.data ?? null, v.data),
+  live: isLiveVersion(v.data, entry!.published),
+  current: i === 0,
+}));
+const fmt = (iso: string) => new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
 ---
 
 <AdminLayout title={title} intro={def.label}>
@@ -38,11 +52,97 @@ const backHref = def.kind === 'single' ? '/admin/content' : `/admin/content/${de
     rowVersion={entry?.rowVersion ?? 0}
     initialState={state}
     initialIssues={entry ? validationIssues(def, entry.draft) : []}
-    canEdit={admin.can('content.edit') && admin.can(def.editPermission)}
+    canEdit={canEdit}
     canSubmit={admin.can('content.submit')}
     canPublish={admin.can('content.publish') && admin.can(def.editPermission)}
     canUnpublish={def.kind === 'list'}
     isLive={Boolean(entry?.published)}
     csrf={admin.csrf}
   />
+
+  {entry && (
+    <section class="admin-card mt-8" aria-labelledby="history-heading">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="history-heading" class="text-lg font-semibold">Version history</h2>
+        <p class="text-sm text-muted">The last {versions.length === 1 ? 'version' : `${versions.length} versions`} of this item. Restoring puts that text back into the draft; nothing goes live until it is published.</p>
+      </div>
+      <p class="admin-flash admin-flash--error mt-3" role="alert" data-action-status hidden></p>
+      {history.length === 0 ? (
+        <p class="mt-3 text-sm text-muted">No earlier versions yet. One is kept every time this item is saved or published.</p>
+      ) : (
+        <div class="admin-table-wrap mt-4">
+          <table class="admin-table history-table">
+            <caption class="sr-only">Versions of {title}</caption>
+            <thead><tr><th>When</th><th>What happened</th><th>Changed</th><th><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              {history.map((v) => (
+                <tr>
+                  <td class="whitespace-nowrap text-sm">{fmt(v.createdAt)}{v.createdBy && <span class="block text-xs text-muted">{v.createdBy}</span>}</td>
+                  <td>
+                    <span class="flex flex-wrap gap-1.5">
+                      <span class="text-sm">{EVENT_LABELS[v.event]}</span>
+                      {v.current && <span class="pill pill--info">Current draft</span>}
+                      {v.live && <span class="pill pill--good">Live now</span>}
+                    </span>
+                  </td>
+                  <td class="text-sm text-muted"><span class="history-label">Changed: </span>{v.changed.length ? v.changed.join(', ') : '—'}</td>
+                  <td class="text-right">
+                    {canEdit && !v.current && (
+                      <button
+                        type="button"
+                        class="admin-btn whitespace-nowrap"
+                        data-content-action="restore-version"
+                        data-collection={def.name}
+                        data-key={entry.key}
+                        data-version-id={String(v.id)}
+                        data-after={`/admin/content/${def.name}/${entry.key}?msg=${encodeURIComponent('That version is back in the draft. Check it, then publish when ready.')}`}
+                        data-confirm-text="Put this version back into the draft? Unsaved changes in the editor above will be lost."
+                        aria-label={`Restore the version from ${fmt(v.createdAt)}`}
+                      >Restore</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  )}
+
+  {entry && canTrash && (
+    <section class="admin-card mt-6 flex flex-wrap items-center justify-between gap-4" aria-labelledby="trash-heading">
+      <div>
+        <h2 id="trash-heading" class="font-semibold">Delete this item</h2>
+        <p class="text-sm text-muted">It leaves the website{entry.published ? ' straight away' : ''} and moves to the Trash, where it can be restored for {TRASH_DAYS} days.</p>
+      </div>
+      <button
+        type="button"
+        class="admin-btn admin-btn--danger"
+        data-content-action="trash"
+        data-collection={def.name}
+        data-key={entry.key}
+        data-after={`/admin/content/${def.name}?msg=${encodeURIComponent(`“${title}” moved to the Trash.`)}`}
+        data-confirm-text={`Move “${title}” to the Trash?${entry.published ? ' It will be removed from the website.' : ''}`}
+      >Move to Trash</button>
+    </section>
+  )}
 </AdminLayout>
+
+<style>
+  .history-label { display: none; }
+  /* Phones: each version becomes a small card, so Restore never hides off-screen. */
+  @media (max-width: 639px) {
+    .history-table thead { display: none; }
+    .history-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.75rem; padding: 0.85rem 1rem; }
+    .history-table td { display: block; padding: 0; border: 0; }
+    .history-table tbody tr + tr { border-top: 1px solid var(--line); }
+    .history-table td:nth-child(2), .history-table td:nth-child(3) { grid-column: 1; }
+    .history-table td:last-child { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+    .history-label { display: inline; }
+  }
+</style>
+
+<script>
+  import '../../../../scripts/admin-content-actions';
+</script>

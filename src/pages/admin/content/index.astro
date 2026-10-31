@@ -2,6 +2,7 @@
 import { env } from 'cloudflare:workers';
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { COLLECTIONS } from '../../../lib/content/collections';
+import { TRASH_DAYS } from '../../../server/content/store';
 
 export const prerender = false;
 
@@ -11,7 +12,7 @@ if (!admin.can('content.view')) return Astro.redirect('/admin?err=Your%20role%20
 const { results } = await env.DB.prepare(
   `SELECT collection, COUNT(*) AS items, SUM(review_status = 'in_review') AS in_review,
           SUM(review_status = 'draft' OR published_data IS NULL) AS pending
-   FROM content_entries GROUP BY collection`,
+   FROM content_entries WHERE deleted_at IS NULL GROUP BY collection`,
 ).all<{ collection: string; items: number; in_review: number; pending: number }>();
 const counts = new Map(results.map((r) => [r.collection, r]));
 ---
@@ -39,6 +40,11 @@ const counts = new Map(results.map((r) => [r.collection, r]));
       );
     })}
   </ul>
+  {admin.can('content.publish') && (
+    <p class="mt-6 text-sm text-muted">
+      Deleted items stay in the <a href="/admin/content/trash" class="font-medium text-accent">Trash</a> for {TRASH_DAYS} days before they are removed for good.
+    </p>
+  )}
 </AdminLayout>
 
 <style>

@@ -5,7 +5,7 @@ import { errorResponse, requireAdmin } from '../../../server/admin/http';
 
 export const prerender = false;
 
-const ACTIONS: ContentAction[] = ['save', 'submit', 'publish', 'unpublish', 'move-up', 'move-down'];
+const ACTIONS: ContentAction[] = ['save', 'submit', 'publish', 'unpublish', 'move-up', 'move-down', 'restore-version', 'trash', 'untrash'];
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
@@ -20,6 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       key: typeof body.key === 'string' ? body.key : null,
       data: body.data,
       ...(typeof body.rowVersion === 'number' ? { rowVersion: body.rowVersion } : {}),
+      ...(typeof body.versionId === 'number' ? { versionId: body.versionId } : {}),
     });
     if (!result.ok) return Response.json({ error: result.error, issues: result.issues ?? [] }, { status: result.status });
     return Response.json({ entry: result.entry, issues: result.issues, rebuild: result.rebuild ?? null });

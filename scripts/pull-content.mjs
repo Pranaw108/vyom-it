@@ -14,7 +14,8 @@ if (source !== 'local' && source !== 'remote') {
   process.exit(0);
 }
 
-const query = 'SELECT collection, key, position, published_data FROM content_entries ORDER BY collection, position, id';
+// Trashed items are never published, but their collection still counts as present.
+const query = 'SELECT collection, key, position, CASE WHEN deleted_at IS NULL THEN published_data END AS published_data FROM content_entries ORDER BY collection, position, id';
 const output = execFileSync('npx', ['wrangler', 'd1', 'execute', 'vyom-website', `--${source}`, '--json', '--command', JSON.stringify(query)], {
   encoding: 'utf8',
   shell: process.platform === 'win32',

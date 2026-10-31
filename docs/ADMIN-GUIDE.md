@@ -42,6 +42,14 @@ Tips:
 - **Take offline** removes a service or project from the website without deleting it.
 - If someone else saved the same item while you were editing, you'll be asked to reload. Copy your changes first.
 
+## Version history
+
+Every item keeps its last 30 versions: one each time it is saved, published or restored. Open the item and scroll to **Version history** to see when each one was made, by whom, and which fields changed. **Restore** puts that version back into the draft. Nothing changes on the website until someone publishes it.
+
+## Trash
+
+**Move to Trash** (at the bottom of a list item, for people who can publish) takes the item off the website at once. It stays in **Content → Trash** for 30 days, where **Restore** brings it back exactly as it was, then it is removed for good. Required pages (homepage, about, settings) cannot be deleted.
+
 ## Team profiles
 
 Only publish someone after they have agreed in writing. Record the date and where the agreement is saved in **Consent to publish**; the site will not publish a profile without it. For the photo, describe the image first, then choose the file. It's resized automatically.

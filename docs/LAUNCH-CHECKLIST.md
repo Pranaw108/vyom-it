@@ -29,4 +29,8 @@
 
 ## Phase 2 (about 3 working weeks after launch)
 
-Version history and restore, trash with 30-day recovery, full media library, redirect manager, weekly database export.
+- [x] Version history and restore (last 30 versions per item)
+- [x] Trash with 30-day recovery
+- [ ] Redirect manager
+- [ ] Full media library (needs R2, which needs a card on the Cloudflare account)
+- [ ] Weekly database export (needs R2)

@@ -1,0 +1,64 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getCollection } from '../../../lib/content/collections';
+import { ContentStore, TRASH_DAYS } from '../../../server/content/store';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+if (!admin.can('content.publish')) return Astro.redirect('/admin/content?err=Your%20role%20cannot%20manage%20the%20Trash.');
+
+const now = Date.now();
+const items = (await new ContentStore(env.DB).listTrash())
+  .map((e) => ({ entry: e, def: getCollection(e.collection) }))
+  .filter((i) => i.def && admin.can(i.def.editPermission))
+  .map(({ entry, def }) => ({
+    entry,
+    def: def!,
+    title: def!.titleOf(entry.draft),
+    daysLeft: Math.max(0, Math.ceil(TRASH_DAYS - (now - Date.parse(entry.deletedAt!)) / 86_400_000)),
+  }));
+const fmt = (iso: string) => new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
+---
+
+<AdminLayout title="Trash" intro={`Deleted content is kept here for ${TRASH_DAYS} days, then removed for good.`}>
+  <a slot="actions" href="/admin/content" class="admin-btn">All content</a>
+  <p class="admin-flash admin-flash--error" role="alert" data-action-status hidden></p>
+  {items.length === 0 ? (
+    <p class="admin-card text-muted">The Trash is empty.</p>
+  ) : (
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <caption class="sr-only">Deleted content</caption>
+        <thead><tr><th>Item</th><th>Type</th><th>Deleted</th><th>Removed for good in</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>
+          {items.map(({ entry, def, title, daysLeft }) => (
+            <tr>
+              <td><span class="font-medium">{title}</span><span class="block font-mono text-xs text-muted">{entry.key}</span></td>
+              <td class="text-sm">{def.label}</td>
+              <td class="text-sm text-muted">{fmt(entry.deletedAt!)}</td>
+              <td><span class:list={['pill', daysLeft <= 3 ? 'pill--warn' : 'pill--muted']}>{daysLeft === 0 ? 'Today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'}`}</span></td>
+              <td class="text-right">
+                <button
+                  type="button"
+                  class="admin-btn whitespace-nowrap"
+                  data-content-action="untrash"
+                  data-collection={def.name}
+                  data-key={entry.key}
+                  data-after={`/admin/content/trash?msg=${encodeURIComponent(`“${title}” restored${entry.published ? ' and back on the website' : ''}.`)}`}
+                  aria-label={`Restore ${title}`}
+                >Restore</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+  <p class="mt-3 text-sm text-muted">Restoring puts an item back exactly as it was: if it was live before, it goes live again.</p>
+</AdminLayout>
+
+<script>
+  import '../../../scripts/admin-content-actions';
+</script>

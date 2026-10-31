@@ -5,6 +5,7 @@ import { leadDepsFromEnv } from './server/leads/deps';
 import { AuditLog } from './server/admin/audit';
 import { SessionStore } from './server/admin/sessions';
 import { LoginLimiter } from './server/admin/login-limit';
+import { ContentStore } from './server/content/store';
 
 export default {
   async fetch(request, env, ctx) {
@@ -18,6 +19,7 @@ export default {
       ctx.waitUntil(new AuditLog(env.DB).purgeExpired().then((n) => n && console.log(`retention: removed ${n} audit entr${n === 1 ? 'y' : 'ies'}`)));
       ctx.waitUntil(new SessionStore(env.DB).pruneExpired());
       ctx.waitUntil(new LoginLimiter(env.DB).prune());
+      ctx.waitUntil(new ContentStore(env.DB).purge().then((n) => n.items + n.versions && console.log(`retention: removed ${n.items} trashed item(s), ${n.versions} old version(s)`)));
       return;
     }
     ctx.waitUntil(retryLeadEmails(deps).then((n) => n && console.log(`retry: processed ${n} lead(s)`)));

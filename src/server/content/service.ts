@@ -5,8 +5,9 @@ import type { AdminContext } from '../admin/context';
 import { COLLECTION_SCHEMAS } from './registry';
 import { ContentStore, type ContentEntry } from './store';
 import { requestRebuild } from './publish';
+import { isLiveVersion } from '../../lib/content/history';
 
-export type ContentAction = 'save' | 'submit' | 'publish' | 'unpublish' | 'move-up' | 'move-down';
+export type ContentAction = 'save' | 'submit' | 'publish' | 'unpublish' | 'move-up' | 'move-down' | 'restore-version' | 'trash' | 'untrash';
 
 export type ContentResult =
   | { ok: true; entry: ContentEntry; issues: string[]; rebuild?: string }
@@ -34,7 +35,7 @@ function denied(error: string): ContentResult {
 export async function applyContentAction(
   admin: AdminContext,
   deps: ContentDeps,
-  input: { action: ContentAction; collection: string; key: string | null; data?: unknown; rowVersion?: number },
+  input: { action: ContentAction; collection: string; key: string | null; data?: unknown; rowVersion?: number; versionId?: number },
 ): Promise<ContentResult> {
   const def = getCollection(input.collection);
   if (!def) return { ok: false, status: 404, error: 'Unknown content type.' };
@@ -43,8 +44,10 @@ export async function applyContentAction(
   const store = new ContentStore(deps.db);
   const audit = new AuditLog(deps.db);
   const userId = admin.user.id;
-  const existing = input.key && input.key !== 'new' ? await store.get(def.name, input.key) : null;
-  if (input.key && input.key !== 'new' && !existing) return { ok: false, status: 404, error: 'This item no longer exists.' };
+  const hasKey = Boolean(input.key && input.key !== 'new');
+  // Only "untrash" works on an item in the trash; everything else sees trashed items as gone.
+  const existing = hasKey ? await (input.action === 'untrash' ? store.getIncludingTrash : store.get).call(store, def.name, input.key!) : null;
+  if (hasKey && !existing) return { ok: false, status: 404, error: 'This item no longer exists.' };
 
   const conflict = (): ContentResult => ({
     ok: false,
@@ -58,15 +61,23 @@ export async function applyContentAction(
       const data = normalise(def.fields, input.data);
       const key = def.kind === 'single' ? 'main' : (def.keyOf?.(data) ?? '');
       if (!KEY_RE.test(key)) return { ok: false, status: 422, error: 'Add a web address / id using lowercase letters, numbers and hyphens.' };
-      const clash = key !== existing?.key ? await store.get(def.name, key) : null;
-      if (clash) return { ok: false, status: 409, error: `Another item already uses "${key}". Choose a different one.` };
+      const clash = key !== existing?.key ? await store.getIncludingTrash(def.name, key) : null;
+      if (clash) {
+        const where = clash.deletedAt ? 'An item in the Trash' : 'Another item';
+        return { ok: false, status: 409, error: `${where} already uses "${key}". Choose a different one${clash.deletedAt ? ', or restore that item' : ''}.` };
+      }
 
       if (!existing) {
-        await store.batch([store.insertStatement(def.name, key, data, userId), audit.statement(admin.actor, 'content.create', def.name, key, def.titleOf(data))]);
+        await store.batch([
+          store.insertStatement(def.name, key, data, userId),
+          audit.statement(admin.actor, 'content.create', def.name, key, def.titleOf(data)),
+          store.versionByKeyStatement(def.name, key, userId),
+        ]);
       } else {
         const [result] = await store.batch([
           store.updateDraftStatement(existing.id, key, data, input.rowVersion ?? -1, userId),
           audit.statement(admin.actor, 'content.save', def.name, key, changeSummary(existing, key)),
+          store.versionStatement(existing.id, 'save', userId),
         ]);
         if (!result?.meta.changes) return conflict();
       }
@@ -93,6 +104,7 @@ export async function applyContentAction(
       const [result] = await store.batch([
         store.publishStatement(existing.id, input.rowVersion ?? -1, userId),
         audit.statement(admin.actor, 'content.publish', def.name, existing.key, def.titleOf(existing.draft)),
+        store.versionStatement(existing.id, 'publish', userId),
       ]);
       if (!result?.meta.changes) return conflict();
       const rebuild = await requestRebuild(deps, admin);
@@ -129,6 +141,40 @@ export async function applyContentAction(
       ]);
       const rebuild = await requestRebuild(deps, admin);
       return { ok: true, entry: (await store.get(def.name, existing.key))!, issues: [], rebuild };
+    }
+
+    case 'restore-version': {
+      if (!existing) return { ok: false, status: 404, error: 'Item not found.' };
+      if (!admin.can('content.edit') || !admin.can(def.editPermission)) return denied('Your role cannot edit this content.');
+      const version = Number.isInteger(input.versionId) ? await store.version(existing.id, input.versionId!) : null;
+      if (!version) return { ok: false, status: 404, error: 'That version is no longer kept.' };
+      const data = normalise(def.fields, version.data);
+      // Keep the item's current web address, so restoring old text never moves the page.
+      if ('slug' in data) data.slug = existing.key;
+      const [result] = await store.batch([
+        store.restoreDraftStatement(existing.id, data, existing.rowVersion, userId, isLiveVersion(data, existing.published)),
+        audit.statement(admin.actor, 'content.restore_version', def.name, existing.key, `Draft restored from the version of ${version.createdAt}`),
+        store.versionStatement(existing.id, 'restore', userId),
+      ]);
+      if (!result?.meta.changes) return conflict();
+      const restored = (await store.get(def.name, existing.key))!;
+      return { ok: true, entry: restored, issues: validationIssues(def, restored.draft) };
+    }
+
+    case 'trash':
+    case 'untrash': {
+      if (!existing) return { ok: false, status: 404, error: 'Item not found.' };
+      if (def.kind === 'single') return { ok: false, status: 422, error: 'This page is required by the website and cannot be deleted.' };
+      if (!admin.can('content.publish') || !admin.can(def.editPermission)) return denied('Your role cannot delete content.');
+      const toTrash = input.action === 'trash';
+      const [result] = await store.batch([
+        toTrash ? store.trashStatement(existing.id, userId) : store.untrashStatement(existing.id),
+        audit.statement(admin.actor, toTrash ? 'content.trash' : 'content.untrash', def.name, existing.key, def.titleOf(existing.draft)),
+      ]);
+      if (!result?.meta.changes) return { ok: false, status: 409, error: toTrash ? 'This item is already in the Trash.' : 'This item is not in the Trash.' };
+      const rebuild = existing.published ? await requestRebuild(deps, admin) : undefined;
+      const entry = (await store.getIncludingTrash(def.name, existing.key))!;
+      return { ok: true, entry, issues: [], ...(rebuild ? { rebuild } : {}) };
     }
   }
 }

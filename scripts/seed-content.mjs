@@ -35,7 +35,12 @@ const sql = rows
     const json = quote(JSON.stringify(data));
     return `INSERT OR IGNORE INTO content_entries (collection, key, position, draft_data, published_data, review_status, published_at, updated_at) VALUES (${quote(collection)}, ${quote(key)}, ${position}, ${json}, ${json}, 'clean', ${quote(now)}, ${quote(now)});`;
   })
-  .join('\n');
+  .join('\n')
+  // Version history needs a first version: each item without one starts with what it holds now.
+  .concat(`
+INSERT INTO content_versions (entry_id, event, data, created_by, created_at)
+  SELECT id, 'baseline', draft_data, updated_by, updated_at FROM content_entries c
+  WHERE NOT EXISTS (SELECT 1 FROM content_versions v WHERE v.entry_id = c.id);`);
 
 const file = join(mkdtempSync(join(tmpdir(), 'vyom-seed-')), 'seed.sql');
 writeFileSync(file, sql);

@@ -51,6 +51,14 @@ Dashboard → Workers → vyom-website → Settings → Builds → connect the G
 | Build variables | `SITE_URL=https://<domain>`, `CONTENT_SOURCE=remote`, `PUBLIC_TURNSTILE_SITE_KEY=<site key>`, `PUBLIC_INDEXING=true` (production only) |
 | Deploy hook | Create one; save its URL as the `DEPLOY_HOOK_URL` secret |
 
+**Preview without R2 (no card on the account):** leave the build command empty and use this deploy command instead; the script builds, removes the R2 binding and sets the preview address:
+
+```bash
+node scripts/deploy-preview.mjs https://<worker>.<subdomain>.workers.dev --no-r2
+```
+
+Build variable: `PUBLIC_TURNSTILE_SITE_KEY`. Turn off builds for non-production branches. The Node version comes from `.node-version`.
+
 `CONTENT_SOURCE=remote` makes the build read **published** admin content from D1. The build needs permission to read D1: confirm on the first build; if it fails with an authentication error, add a Cloudflare API token with "D1 Read" as the build variable `CLOUDFLARE_API_TOKEN`.
 
 Preview builds (pull requests) must use `PUBLIC_INDEXING=false` so they are never indexed. Protect preview URLs with Access as well, or keep the admin disabled there.

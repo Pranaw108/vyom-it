@@ -16,12 +16,13 @@ const path = Astro.url.pathname;
 const message = Astro.url.searchParams.get('msg');
 const error = Astro.url.searchParams.get('err');
 
-type NavIcon = 'layers' | 'message' | 'pen' | 'users' | 'shield' | 'compass' | 'lock';
+type NavIcon = 'layers' | 'message' | 'pen' | 'users' | 'shield' | 'compass' | 'lock' | 'arrow-up-right';
 const nav: { label: string; href: string; icon: NavIcon; permission: Permission }[] = [
   { label: 'Dashboard', href: '/admin', icon: 'compass', permission: 'dashboard.view' },
   { label: 'Leads', href: '/admin/leads', icon: 'message', permission: 'leads.view' },
   { label: 'Content', href: '/admin/content', icon: 'pen', permission: 'content.view' },
   { label: 'Team', href: '/admin/content/team', icon: 'users', permission: 'team.edit' },
+  { label: 'Redirects', href: '/admin/redirects', icon: 'arrow-up-right', permission: 'content.publish' },
   { label: 'Accounts', href: '/admin/users', icon: 'shield', permission: 'users.manage' },
   { label: 'Audit log', href: '/admin/audit', icon: 'layers', permission: 'audit.view' },
   { label: 'Your account', href: '/admin/account', icon: 'lock', permission: 'dashboard.view' },

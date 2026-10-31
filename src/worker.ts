@@ -1,4 +1,4 @@
-// Worker entry: Astro handles requests; the scheduled handler runs the lead email retries and retention.
+// Worker entry: Owner-set redirects first, then Astro handles requests; the scheduled handler runs the lead email retries and retention.
 import { handle } from '@astrojs/cloudflare/handler';
 import { applyRetention, retryLeadEmails } from './server/leads/service';
 import { leadDepsFromEnv } from './server/leads/deps';
@@ -6,10 +6,11 @@ import { AuditLog } from './server/admin/audit';
 import { SessionStore } from './server/admin/sessions';
 import { LoginLimiter } from './server/admin/login-limit';
 import { ContentStore } from './server/content/store';
+import { serveRedirect } from './server/redirects/serve';
 
 export default {
   async fetch(request, env, ctx) {
-    return handle(request, env, ctx);
+    return (await serveRedirect(request, env.DB, ctx)) ?? handle(request, env, ctx);
   },
 
   async scheduled(controller, env, ctx) {

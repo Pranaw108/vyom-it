@@ -50,6 +50,15 @@ Every item keeps its last 30 versions: one each time it is saved, published or r
 
 **Move to Trash** (at the bottom of a list item, for people who can publish) takes the item off the website at once. It stays in **Content → Trash** for 30 days, where **Restore** brings it back exactly as it was, then it is removed for good. Required pages (homepage, about, settings) cannot be deleted.
 
+## Redirects
+
+When a page moves or is removed (for example, a service is renamed), add a redirect in **Redirects** so old links and search results still work. It works straight away; nothing needs publishing.
+
+- **From:** the old address after the domain, for example `/old-services`. It must not be a page that still exists.
+- **To:** the new page on this site, or a full `https://` link.
+- **Permanent** for pages that moved for good (search engines update their links); **Temporary** for campaigns.
+- The **Used** column shows how often each redirect is still followed. Remove one only when nobody uses it any more.
+
 ## Team profiles
 
 Only publish someone after they have agreed in writing. Record the date and where the agreement is saved in **Consent to publish**; the site will not publish a profile without it. For the photo, describe the image first, then choose the file. It's resized automatically.

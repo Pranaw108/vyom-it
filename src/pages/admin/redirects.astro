@@ -1,0 +1,98 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { RedirectStore } from '../../server/redirects/store';
+
+export const prerender = false;
+
+const admin = Astro.locals.admin!;
+if (!admin.can('content.publish')) return Astro.redirect('/admin?err=Your%20role%20cannot%20manage%20redirects.');
+const redirects = await new RedirectStore(env.DB).list();
+const fmt = (iso: string) => new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }).format(new Date(iso));
+---
+
+<AdminLayout title="Redirects" intro="Send visitors from an old address to a new one, for example after renaming a service. Changes work straight away; no publishing needed.">
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div class="min-w-0">
+      {redirects.length === 0 ? (
+        <p class="admin-card text-muted">No redirects yet. Add one when a page moves or is removed, so old links and search results still work.</p>
+      ) : (
+        <div class="admin-table-wrap">
+          <table class="admin-table redirect-table">
+            <caption class="sr-only">Redirects</caption>
+            <thead><tr><th>From</th><th>To</th><th>Type</th><th>Used</th><th><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              {redirects.map((r) => (
+                <tr>
+                  <td class="redirect-path font-mono text-sm">{r.from}</td>
+                  <td class="redirect-path font-mono text-sm"><span class="redirect-label">To </span>{r.to}</td>
+                  <td><span class:list={['pill', r.status === 301 ? 'pill--muted' : 'pill--info']}>{r.status === 301 ? 'Permanent' : 'Temporary'}</span></td>
+                  <td class="text-sm whitespace-nowrap">
+                    {r.hits === 0 ? <span class="text-muted">Not yet</span> : <>{r.hits.toLocaleString('en-IN')} time{r.hits === 1 ? '' : 's'}</>}
+                    {r.lastHitAt && <span class="block text-xs text-muted">Last {fmt(r.lastHitAt)}</span>}
+                  </td>
+                  <td class="text-right">
+                    <form method="post" action="/api/admin/redirects" data-confirm={`Remove the redirect from ${r.from}? Old links to it will show “page not found”.`}>
+                      <input type="hidden" name="_csrf" value={admin.csrf} />
+                      <input type="hidden" name="action" value="delete" />
+                      <input type="hidden" name="id" value={String(r.id)} />
+                      <button class="admin-btn admin-btn--danger whitespace-nowrap" type="submit" aria-label={`Remove the redirect from ${r.from}`}>Remove</button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+    <aside class="flex flex-col gap-6">
+      <form method="post" action="/api/admin/redirects" class="admin-card flex flex-col gap-3">
+        <h2 class="text-lg font-semibold">Add a redirect</h2>
+        <input type="hidden" name="_csrf" value={admin.csrf} />
+        <input type="hidden" name="action" value="create" />
+        <div>
+          <label for="redirect-from" class="admin-label">From (old address)</label>
+          <input id="redirect-from" name="from" required class="admin-input font-mono" placeholder="/old-page" autocomplete="off" autocapitalize="none" spellcheck="false" />
+          <p class="mt-1 text-xs text-muted">The part after the domain. It must not be a page that still exists.</p>
+        </div>
+        <div>
+          <label for="redirect-to" class="admin-label">To (new address)</label>
+          <input id="redirect-to" name="to" required class="admin-input font-mono" placeholder="/services/website-development" autocomplete="off" autocapitalize="none" spellcheck="false" />
+          <p class="mt-1 text-xs text-muted">A page on this site, or a full https:// link.</p>
+        </div>
+        <fieldset class="flex flex-col gap-1.5 text-sm">
+          <legend class="admin-label">Type</legend>
+          <label class="flex items-start gap-2"><input type="radio" name="type" value="permanent" checked class="mt-1" /><span><strong>Permanent</strong> <span class="text-muted">— the page has moved for good. Search engines update their links.</span></span></label>
+          <label class="flex items-start gap-2"><input type="radio" name="type" value="temporary" class="mt-1" /><span><strong>Temporary</strong> <span class="text-muted">— for a short campaign or while a page is being rebuilt.</span></span></label>
+        </fieldset>
+        <button class="admin-btn admin-btn--primary" type="submit">Add redirect</button>
+      </form>
+    </aside>
+  </div>
+</AdminLayout>
+
+<style>
+  .redirect-label { display: none; }
+  .redirect-path { min-width: 14ch; overflow-wrap: anywhere; }
+  /* Phones: each redirect becomes a small card so Remove stays in view. */
+  @media (max-width: 639px) {
+    .redirect-table thead { display: none; }
+    .redirect-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.75rem; padding: 0.85rem 1rem; }
+    .redirect-table td { display: block; padding: 0; border: 0; min-width: 0; }
+    .redirect-table tbody tr + tr { border-top: 1px solid var(--line); }
+    .redirect-table td:not(:last-child) { grid-column: 1; }
+    .redirect-table td:last-child { grid-column: 2; grid-row: 1 / span 4; align-self: center; }
+    .redirect-label { display: inline; color: var(--muted); }
+  }
+</style>
+
+<script>
+  // Removing a redirect asks first; the form only submits once confirmed.
+  for (const form of document.querySelectorAll<HTMLFormElement>('form[data-confirm]')) {
+    form.addEventListener('submit', (event) => {
+      if (!window.confirm(form.dataset.confirm ?? 'Are you sure?')) event.preventDefault();
+    });
+  }
+</script>

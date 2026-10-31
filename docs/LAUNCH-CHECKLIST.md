@@ -31,6 +31,6 @@
 
 - [x] Version history and restore (last 30 versions per item)
 - [x] Trash with 30-day recovery
-- [ ] Redirect manager
+- [x] Redirect manager
 - [ ] Full media library (needs R2, which needs a card on the Cloudflare account)
 - [ ] Weekly database export (needs R2)
